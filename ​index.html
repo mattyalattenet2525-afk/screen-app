@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画面録画ツール</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- パスワード入力画面（最初はこっちが表示される） -->
+    <div id="auth-screen" class="container">
+        <h2>使用するにはパスワードを入力してください</h2>
+        <div class="input-group">
+            <input type="password" id="password-input" placeholder="パスワードを入力">
+            <button id="login-btn">入室</button>
+        </div>
+        <p id="error-msg" class="error"></p>
+    </div>
+
+    <!-- 操作画面（パスワードが合致すると表示される） -->
+    <div id="app-screen" class="container hidden">
+        <h1>画面録画コントロールパネル</h1>
+        <p>認証成功！ここに録画開始ボタンなどを配置します。</p>
+        <button id="record-start-btn">画面録画を開始する</button>
+        <!-- 将来的にここに録画終了ボタンやクラウド連携の処理を追加していく -->
+    </div>
+
+    <script>
+        // 設定したいパスワード（必要に応じて変更してください）
+        const CORRECT_PASSWORD = "testpass";
+
+        const authScreen = document.getElementById('auth-screen');
+        const appScreen = document.getElementById('app-screen');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMsg = document.getElementById('error-msg');
+
+        // ボタンが押されたとき、またはエンターキーが押されたときの処理
+        function checkPassword() {
+            if (passwordInput.value === CORRECT_PASSWORD) {
+                // パスワードが合っていれば認証画面を消して、操作画面を表示
+                authScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+            } else {
+                errorMsg.textContent = "パスワードが間違っています。";
+                passwordInput.value = "";
+            }
+        }
+
+        loginBtn.addEventListener('click', checkPassword);
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+    </script>
+</body>
+</html>
