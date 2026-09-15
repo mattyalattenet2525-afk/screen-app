@@ -5,66 +5,42 @@ const path = require("path");
 const PORT = process.env.PORT || 10000;
 
 // ================================
-// ファイルを探す（柔軟検索版）
+// ファイルを探す（直接指定＋柔軟検索）
 // ================================
 
 function findFile(fileName) {
-    const ROOTS = [
-        process.cwd(),
-        __dirname,
-        path.join(process.cwd(), "src"),
-        path.join(__dirname, "src"),
-        "/opt/render/project/src",
-        "/opt/render/project/src/src"
+    const cleanName = fileName.trim();
+    
+    // 1. まず現在地周辺を直接チェック
+    const directPaths = [
+        path.join(process.cwd(), cleanName),
+        path.join(__dirname, cleanName),
+        path.join("/opt/render/project/src", cleanName)
     ];
 
-    const targetName = fileName.toLowerCase();
+    for (const p of directPaths) {
+        if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+            return p;
+        }
+    }
 
+    // 2. フォルダ内のファイル名トリム比較
+    const ROOTS = [process.cwd(), __dirname, "/opt/render/project/src"];
     for (const root of ROOTS) {
         if (!fs.existsSync(root)) continue;
-
         try {
             const files = fs.readdirSync(root);
             for (const file of files) {
-                if (file.toLowerCase() === targetName) {
+                if (file.trim().toLowerCase() === cleanName.toLowerCase()) {
                     const fullPath = path.join(root, file);
                     if (fs.statSync(fullPath).isFile()) {
                         return fullPath;
                     }
                 }
             }
-        } catch (e) {
-            // 読み込みエラーはスキップ
-        }
+        } catch (e) {}
     }
 
-    // 再帰的検索
-    for (const root of ROOTS) {
-        if (fs.existsSync(root)) {
-            const found = searchRecursive(root, targetName);
-            if (found) return found;
-        }
-    }
-
-    return null;
-}
-
-function searchRecursive(dir, targetName) {
-    try {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        for (const entry of entries) {
-            const fullPath = path.join(dir, entry.name);
-            if (entry.isDirectory()) {
-                if (entry.name === "node_modules" || entry.name === ".git") continue;
-                const result = searchRecursive(fullPath, targetName);
-                if (result) return result;
-            } else if (entry.name.toLowerCase() === targetName) {
-                return fullPath;
-            }
-        }
-    } catch (e) {
-        // エラー無視
-    }
     return null;
 }
 
@@ -124,18 +100,25 @@ const server = http.createServer((req, res) => {
     // ================================
 
     if (url === "/") {
-        const indexFile = findFile("index.html");
+        let indexFile = findFile("index.html");
+
+        // 万が一見つからない場合の強行突破フォールバック
+        if (!indexFile) {
+            const fallbackPath = path.join(process.cwd(), "index.html");
+            if (fs.existsSync(fallbackPath)) {
+                indexFile = fallbackPath;
+            }
+        }
 
         if (!indexFile) {
             res.writeHead(500, {
                 "Content-Type": "text/plain; charset=UTF-8"
             });
-
             res.end("index.html が見つかりません。");
             return;
         }
 
-        console.log("index.html:", indexFile);
+        console.log("index.html found:", indexFile);
         sendFile(indexFile, res);
         return;
     }
