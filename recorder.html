@@ -1,10 +1,9 @@
-```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>画面録画ツール - 録画</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>画面録画ツール - 操作画面</title>
 
 <style>
 * {
@@ -56,9 +55,8 @@ button {
     cursor: pointer;
 }
 
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+button:hover {
+    opacity: 0.92;
 }
 
 #logout {
@@ -74,7 +72,7 @@ button:disabled {
 
 .layout {
     display: grid;
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 320px;
     gap: 20px;
 }
 
@@ -88,16 +86,18 @@ button:disabled {
     border-radius: 10px;
 }
 
-video {
+.preview-image {
     width: 100%;
-    max-height: 650px;
-    background: black;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .no-preview {
     padding: 20px;
     color: #94a3b8;
     text-align: center;
+    line-height: 1.7;
 }
 
 .hidden {
@@ -122,33 +122,65 @@ video {
     border-radius: 7px;
 }
 
-.recording {
-    color: #f87171;
-    font-weight: bold;
+.group {
+    margin-top: 14px;
 }
 
-#start {
+.group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #cbd5e1;
+    font-size: 0.92rem;
+}
+
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #334155;
+    border-radius: 7px;
+    background: #0f172a;
+    color: white;
+    outline: none;
+}
+
+#to-save {
+    background: #0ea5e9;
+}
+
+#to-save:hover {
+    background: #0284c7;
+}
+
+#to-record {
     background: #3b82f6;
 }
 
-#start:hover:not(:disabled) {
+#to-record:hover {
     background: #2563eb;
+}
+
+#start {
+    background: #22c55e;
+}
+
+#start:hover {
+    background: #16a34a;
 }
 
 #stop {
     background: #ef4444;
 }
 
-#stop:hover:not(:disabled) {
+#stop:hover {
     background: #dc2626;
 }
 
 #download {
-    background: #22c55e;
+    background: #8b5cf6;
 }
 
-#download:hover:not(:disabled) {
-    background: #16a34a;
+#download:hover {
+    background: #7c3aed;
 }
 
 .info {
@@ -182,7 +214,7 @@ video {
     }
 
     .preview-area {
-        min-height: 300px;
+        min-height: 240px;
     }
 }
 </style>
@@ -191,218 +223,97 @@ video {
 <body>
 
 <div class="container">
+    <header>
+        <h1>🎥 画面録画コントロールパネル</h1>
+        <button id="logout">ログアウト</button>
+    </header>
 
-<header>
-    <h1>🎥 画面録画コントロールパネル</h1>
-    <button id="logout">ログアウト</button>
-</header>
+    <div class="layout">
+        <section class="preview-area">
+            <img class="preview-image" src="IMG_0312.jpeg" alt="操作画面イメージ" />
+        </section>
 
-<div class="layout">
+        <section class="controls">
+            <h2>操作項目</h2>
 
-<section class="preview-area">
+            <div id="status" class="status">
+                操作画面です。下のボタンから各機能へ進みます。
+            </div>
 
-    <div id="no-preview" class="no-preview">
-        ここに録画した映像が表示されます。
+            <div class="group">
+                <label for="storageType">保存先</label>
+                <select id="storageType">
+                    <option value="internal">内部ストレージ</option>
+                    <option value="external">外部ストレージ（接続が確認できてるSSD、USB、SDカードなど）</option>
+                </select>
+            </div>
+
+            <div class="group">
+                <label for="fpsType">録画開始項目 / FPS</label>
+                <select id="fpsType">
+                    <option value="30">30FPS</option>
+                    <option value="60">60FPS</option>
+                </select>
+            </div>
+
+            <div class="group">
+                <label for="resolutionType">解像度</label>
+                <select id="resolutionType">
+                    <option value="256x144">144p：256 × 144px</option>
+                    <option value="427x240">240p：427 × 240px（低画質・モバイル向け）</option>
+                    <option value="640x360">360p：640 × 360px（低画質）</option>
+                    <option value="720x480">480p（SD）：720 × 480px（DVD相当）</option>
+                    <option value="1280x720">720p（HD）：1280 × 720px（ハイビジョン）</option>
+                    <option value="1920x1080">1080p（フルHD / 2K）：1920 × 1080px（現在の標準・YouTube等）</option>
+                    <option value="2560x1440">1440p（WQHD / 2K）：2560 × 1440px（高解像度・ゲーム実況等）</option>
+                </select>
+            </div>
+
+            <button id="to-save">保存先を作る</button>
+            <button id="to-record">録画の画質を実行して録画する</button>
+
+            <p class="info">
+                この画面は操作用です。<br><br>
+                「保存先を作る」は保存先設定ページへ移動します。<br>
+                「録画の画質を実行して録画する」はFPSと解像度を選んで録画ページへ移動します。<br><br>
+                保存前に容量が足りない場合は、
+                「お使いのストレージは保存できるほどの容量を満たしておりません」
+                を表示する構成にします。
+            </p>
+        </section>
     </div>
-
-    <video id="preview" class="hidden" controls></video>
-
-</section>
-
-<section class="controls">
-
-    <h2>録画操作</h2>
-
-    <div id="status" class="status">
-        待機中
-    </div>
-
-    <button id="start">
-        🎥 画面録画を開始
-    </button>
-
-    <button id="stop" disabled>
-        ⏹ 録画を停止
-    </button>
-
-    <button id="download" disabled>
-        💾 録画を保存
-    </button>
-
-    <p class="info">
-        「画面録画を開始」を押すと、
-        録画する画面を選択できます。
-        <br><br>
-        「画面」「ウィンドウ」「ブラウザタブ」
-        などから選択してください。
-        <br><br>
-        録画データはWebM形式で保存されます。
-    </p>
-
-</section>
-
-</div>
 </div>
 
 <script>
-if (
-    sessionStorage.getItem("recording_authenticated") !== "true"
-) {
+if (sessionStorage.getItem("recording_authenticated") !== "true") {
     window.location.href = "index.html";
 }
 
-const start = document.getElementById("start");
-const stop = document.getElementById("stop");
-const download = document.getElementById("download");
 const logout = document.getElementById("logout");
 const status = document.getElementById("status");
-const preview = document.getElementById("preview");
-const noPreview = document.getElementById("no-preview");
+const toSave = document.getElementById("to-save");
+const toRecord = document.getElementById("to-record");
+const storageType = document.getElementById("storageType");
+const fpsType = document.getElementById("fpsType");
+const resolutionType = document.getElementById("resolutionType");
 
-let stream = null;
-let recorder = null;
-let chunks = [];
-let recordedBlob = null;
+toSave.addEventListener("click", () => {
+    sessionStorage.setItem("selected_storage", storageType.value);
+    window.location.href = "save.html";
+});
 
-async function startRecording() {
-    try {
-        chunks = [];
-        recordedBlob = null;
+toRecord.addEventListener("click", () => {
+    sessionStorage.setItem("selected_storage", storageType.value);
+    sessionStorage.setItem("selected_fps", fpsType.value);
+    sessionStorage.setItem("selected_resolution", resolutionType.value);
+    window.location.href = "record.html";
+});
 
-        stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { cursor: "motion" },
-            audio: true
-        });
-
-        let mimeType = "video/webm;codecs=vp9,opus";
-
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = "video/webm";
-        }
-
-        recorder = new MediaRecorder(stream, {
-            mimeType: mimeType
-        });
-
-        recorder.ondataavailable = (event) => {
-            if (event.data && event.data.size > 0) {
-                chunks.push(event.data);
-            }
-        };
-
-        recorder.onstop = () => {
-            recordedBlob = new Blob(chunks, {
-                type: "video/webm"
-            });
-
-            preview.src = URL.createObjectURL(recordedBlob);
-            preview.classList.remove("hidden");
-            noPreview.classList.add("hidden");
-
-            download.disabled = false;
-            status.textContent = "録画完了";
-            status.classList.remove("recording");
-        };
-
-        const videoTrack = stream.getVideoTracks()[0];
-
-        videoTrack.addEventListener("ended", () => {
-            if (
-                recorder &&
-                recorder.state === "recording"
-            ) {
-                stopRecording();
-            }
-        });
-
-        recorder.start(1000);
-
-        start.disabled = true;
-        stop.disabled = false;
-        download.disabled = true;
-
-        status.textContent = "🔴 録画中";
-        status.classList.add("recording");
-
-    } catch (error) {
-        console.error(error);
-        status.textContent =
-            "録画を開始できませんでした。";
-    }
-}
-
-function stopRecording() {
-    if (
-        recorder &&
-        recorder.state === "recording"
-    ) {
-        recorder.stop();
-    }
-
-    if (stream) {
-        stream.getTracks().forEach((track) => {
-            track.stop();
-        });
-
-        stream = null;
-    }
-
-    start.disabled = false;
-    stop.disabled = true;
-}
-
-function downloadRecording() {
-    if (!recordedBlob) {
-        return;
-    }
-
-    const url = URL.createObjectURL(recordedBlob);
-    const link = document.createElement("a");
-    const now = new Date();
-
-    const filename =
-        "screen-recording-" +
-        now.getFullYear() + "-" +
-        String(now.getMonth() + 1).padStart(2, "0") + "-" +
-        String(now.getDate()).padStart(2, "0") + "-" +
-        String(now.getHours()).padStart(2, "0") + "-" +
-        String(now.getMinutes()).padStart(2, "0") + "-" +
-        String(now.getSeconds()).padStart(2, "0") +
-        ".webm";
-
-    link.href = url;
-    link.download = filename;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setTimeout(() => {
-        URL.revokeObjectURL(url);
-    }, 1000);
-}
-
-function doLogout() {
-    if (
-        recorder &&
-        recorder.state === "recording"
-    ) {
-        stopRecording();
-    }
-
-    sessionStorage.removeItem(
-        "recording_authenticated"
-    );
-
+logout.addEventListener("click", () => {
+    sessionStorage.removeItem("recording_authenticated");
     window.location.href = "index.html";
-}
-
-start.addEventListener("click", startRecording);
-stop.addEventListener("click", stopRecording);
-download.addEventListener("click", downloadRecording);
-logout.addEventListener("click", doLogout);
+});
 </script>
 
 </body>
 </html>
-```
