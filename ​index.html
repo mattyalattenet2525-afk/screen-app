@@ -1,127 +1,155 @@
-画面録画ツール
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>画面録画ツール - ログイン</title>
 
-```
-    body.auth-bg {
-        background-image: url('IMG_0031.jpeg');
-    }
+<style>
+* {
+    box-sizing: border-box;
+}
 
-    body.app-bg {
-        background-image: url('IMG_0312.jpeg');
-    }
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    color: white;
+    background: url("IMG_0031.jpeg") center / cover no-repeat;
+}
 
+.container {
+    width: 90%;
+    max-width: 900px;
+    padding: 45px;
+    text-align: center;
+    background: rgba(15, 23, 42, 0.86);
+    backdrop-filter: blur(8px);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+h1 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.description {
+    color: #cbd5e1;
+    margin-bottom: 30px;
+}
+
+.login-area {
+    max-width: 550px;
+    margin: auto;
+}
+
+input {
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+    color: white;
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 7px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #3b82f6;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    background: #3b82f6;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+.error {
+    min-height: 20px;
+    color: #ef4444;
+}
+
+@media (max-width: 600px) {
     .container {
-        background-color: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(6px);
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        text-align: center;
-        width: 90%;
-        max-width: 400px;
+        width: 94%;
+        padding: 25px;
     }
-
-    h2 {
-        font-size: 1.1rem;
-        margin-bottom: 20px;
-    }
-
-    .input-group {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    input[type="password"] {
-        padding: 12px;
-        font-size: 1rem;
-        border: 1px solid #475569;
-        border-radius: 6px;
-        background-color: #0f172a;
-        color: #fff;
-        outline: none;
-    }
-
-    input[type="password"]:focus {
-        border-color: #3b82f6;
-    }
-
-    button {
-        padding: 12px;
-        font-size: 1rem;
-        font-weight: bold;
-        background-color: #3b82f6;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    button:hover {
-        background-color: #2563eb;
-    }
-
-    .error {
-        color: #ef4444;
-        font-size: 0.85rem;
-        margin-top: 10px;
-        height: 1.2em;
-    }
-
-    .hidden {
-        display: none !important;
-    }
+}
 </style>
+</head>
 
-```
+<body>
 
-```
-<!-- パスワード入力画面 -->
-<div id="auth-screen" class="container">
-    <h2>使用するにはパスワードを入力してください</h2>
-    <div class="input-group">
-        <input type="password" id="password-input" placeholder="パスワードを入力">
-        <button id="login-btn">入室</button>
+<div class="container">
+    <h1>🎥 画面録画ツール</h1>
+
+    <p class="description">
+        使用するにはパスワードを入力してください。
+    </p>
+
+    <div class="login-area">
+        <input
+            type="password"
+            id="password"
+            placeholder="パスワードを入力"
+            autocomplete="off"
+        >
+
+        <button id="login">
+            入室する
+        </button>
+
+        <p id="error" class="error"></p>
     </div>
-    <p id="error-msg" class="error"></p>
-</div>
-
-<!-- 操作画面 -->
-<div id="app-screen" class="container hidden">
-    <h1>画面録画コントロールパネル</h1>
-    <p>認証成功！ここに録画開始ボタンなどを配置します。</p>
-    <button id="record-start-btn">画面録画を開始する</button>
 </div>
 
 <script>
-    const CORRECT_PASSWORD = "testpass";
+const CORRECT_PASSWORD = "testpass";
 
-    const pageBody = document.getElementById('page-body');
-    const authScreen = document.getElementById('auth-screen');
-    const appScreen = document.getElementById('app-screen');
-    const passwordInput = document.getElementById('password-input');
-    const loginBtn = document.getElementById('login-btn');
-    const errorMsg = document.getElementById('error-msg');
+const password = document.getElementById("password");
+const login = document.getElementById("login");
+const error = document.getElementById("error");
 
-    function checkPassword() {
-        if (passwordInput.value === CORRECT_PASSWORD) {
-            authScreen.classList.add('hidden');
-            appScreen.classList.remove('hidden');
-            
-            pageBody.classList.remove('auth-bg');
-            pageBody.classList.add('app-bg');
-        } else {
-            errorMsg.textContent = "パスワードが間違っています。";
-            passwordInput.value = "";
-        }
+function loginCheck() {
+    if (password.value === CORRECT_PASSWORD) {
+        sessionStorage.setItem(
+            "recording_authenticated",
+            "true"
+        );
+
+        window.location.href = "recorder.html";
+    } else {
+        error.textContent = "パスワードが間違っています。";
+        password.value = "";
+        password.focus();
     }
+}
 
-    loginBtn.addEventListener('click', checkPassword);
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            checkPassword();
-        }
-    });
+login.addEventListener("click", loginCheck);
+
+password.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        loginCheck();
+    }
+});
 </script>
 
+</body>
+</html>
 ```
