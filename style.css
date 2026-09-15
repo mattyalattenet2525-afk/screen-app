@@ -1,9 +1,7 @@
-/* 全体のレイアウトと背景画像の設定 */
+/* 全体の共通レイアウト */
 body {
     margin: 0;
     padding: 0;
-    /* 背景に画像を設定（ネット上のサンプル画像を使用しています） */
-    background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -15,9 +13,19 @@ body {
     height: 100vh;
 }
 
+/* 1枚目の背景画像（パスワード画面用） */
+body.auth-bg {
+    background-image: url('IMG_0031.jpeg');
+}
+
+/* 2枚目の背景画像（操作画面用） */
+body.app-bg {
+    background-image: url('IMG_0312.jpeg');
+}
+
 .container {
-    background-color: rgba(30, 41, 59, 0.85); /* 少し透けさせることで背景画像となじませる */
-    backdrop-filter: blur(8px);
+    background-color: rgba(15, 23, 42, 0.85); /* 背景の文字が見えやすいように少し暗く透過させる */
+    backdrop-filter: blur(6px);
     padding: 30px;
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
