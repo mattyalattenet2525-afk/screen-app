@@ -5,11 +5,10 @@ const path = require("path");
 const PORT = process.env.PORT || 10000;
 
 // ================================
-// ファイルを探す（修正版）
+// ファイルを探す
 // ================================
 
 function findFile(fileName) {
-    // 検索する候補のディレクトリを広く網羅する
     const ROOTS = [
         process.cwd(),
         __dirname,
@@ -30,7 +29,6 @@ function findFile(fileName) {
         }
     }
 
-    // 万が一見つからない場合、再帰的に下層フォルダも探す
     for (const root of ROOTS) {
         if (fs.existsSync(root)) {
             const found = searchRecursive(root, fileName);
@@ -41,7 +39,6 @@ function findFile(fileName) {
     return null;
 }
 
-// サブフォルダも含めて再帰的に探すヘルパー関数
 function searchRecursive(dir, targetName) {
     try {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -56,7 +53,7 @@ function searchRecursive(dir, targetName) {
             }
         }
     } catch (e) {
-        // エラーは無視
+        // エラー無視
     }
     return null;
 }
@@ -71,19 +68,15 @@ const MIME_TYPES = {
     ".css": "text/css; charset=UTF-8",
     ".js": "application/javascript; charset=UTF-8",
     ".json": "application/json; charset=UTF-8",
-
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
     ".png": "image/png",
     ".gif": "image/gif",
     ".webp": "image/webp",
     ".svg": "image/svg+xml",
-
     ".ico": "image/x-icon",
-
     ".mp4": "video/mp4",
     ".webm": "video/webm",
-
     ".mp3": "audio/mpeg",
     ".wav": "audio/wav"
 };
@@ -94,13 +87,8 @@ const MIME_TYPES = {
 // ================================
 
 function sendFile(filePath, res) {
-
-    const extension =
-        path.extname(filePath).toLowerCase();
-
-    const contentType =
-        MIME_TYPES[extension] ||
-        "application/octet-stream";
+    const extension = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[extension] || "application/octet-stream";
 
     res.writeHead(200, {
         "Content-Type": contentType
@@ -116,10 +104,7 @@ function sendFile(filePath, res) {
 
 const server = http.createServer((req, res) => {
 
-    let url =
-        decodeURIComponent(
-            req.url.split("?")[0]
-        );
+    let url = decodeURIComponent(req.url.split("?")[0]);
 
     console.log("Request:", url);
 
@@ -130,35 +115,33 @@ const server = http.createServer((req, res) => {
 
     if (url === "/") {
 
-        const indexFile =
-            findFile("index.html");
+        // デバッグ用：現在のフォルダの中身を取得
+        let dirContents = "";
+        try {
+            dirContents = "\n\n【現在のフォルダ内のファイル一覧】\n" + fs.readdirSync(process.cwd()).join("\n");
+        } catch (e) {
+            dirContents = "\n\nファイル一覧の取得に失敗: " + e.message;
+        }
+
+        const indexFile = findFile("index.html");
 
         if (!indexFile) {
-
             res.writeHead(500, {
-                "Content-Type":
-                    "text/plain; charset=UTF-8"
+                "Content-Type": "text/plain; charset=UTF-8"
             });
 
             res.end(
                 "index.html が見つかりません。\n\n" +
-                "process.cwd(): " +
-                process.cwd() +
-                "\n\n" +
-                "__dirname: " +
-                __dirname
+                "process.cwd(): " + process.cwd() + "\n\n" +
+                "__dirname: " + __dirname +
+                dirContents
             );
 
             return;
         }
 
-        console.log(
-            "index.html:",
-            indexFile
-        );
-
+        console.log("index.html:", indexFile);
         sendFile(indexFile, res);
-
         return;
     }
 
@@ -168,10 +151,8 @@ const server = http.createServer((req, res) => {
     // ================================
 
     if (url === "/favicon.ico") {
-
         res.writeHead(204);
         res.end();
-
         return;
     }
 
@@ -180,35 +161,18 @@ const server = http.createServer((req, res) => {
     // URLからファイル名を取得
     // ================================
 
-    const fileName =
-        path.basename(url);
-
-
-    const filePath =
-        findFile(fileName);
-
+    const fileName = path.basename(url);
+    const filePath = findFile(fileName);
 
     if (!filePath) {
-
         res.writeHead(404, {
-            "Content-Type":
-                "text/plain; charset=UTF-8"
+            "Content-Type": "text/plain; charset=UTF-8"
         });
-
-        res.end(
-            "File Not Found: " +
-            fileName
-        );
-
+        res.end("File Not Found: " + fileName);
         return;
     }
 
-
-    console.log(
-        "File:",
-        filePath
-    );
-
+    console.log("File:", filePath);
     sendFile(filePath, res);
 });
 
@@ -217,36 +181,11 @@ const server = http.createServer((req, res) => {
 // Render用サーバー起動
 // ================================
 
-server.listen(
-    PORT,
-    "0.0.0.0",
-    () => {
-
-        console.log(
-            "================================"
-        );
-
-        console.log(
-            "Screen App Server Started"
-        );
-
-        console.log(
-            "Port:",
-            PORT
-        );
-
-        console.log(
-            "process.cwd():",
-            process.cwd()
-        );
-
-        console.log(
-            "__dirname:",
-            __dirname
-        );
-
-        console.log(
-            "================================"
-        );
-    }
-);
+server.listen(PORT, "0.0.0.0", () => {
+    console.log("================================");
+    console.log("Screen App Server Started");
+    console.log("Port:", PORT);
+    console.log("process.cwd():", process.cwd());
+    console.log("__dirname:", __dirname);
+    console.log("================================");
+});
