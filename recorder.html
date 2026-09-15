@@ -93,17 +93,6 @@ button:hover {
     display: block;
 }
 
-.no-preview {
-    padding: 20px;
-    color: #94a3b8;
-    text-align: center;
-    line-height: 1.7;
-}
-
-.hidden {
-    display: none;
-}
-
 .controls {
     padding: 20px;
     background: rgba(30, 41, 59, 0.85);
@@ -143,14 +132,6 @@ select {
     outline: none;
 }
 
-#to-save {
-    background: #0ea5e9;
-}
-
-#to-save:hover {
-    background: #0284c7;
-}
-
 #to-record {
     background: #3b82f6;
 }
@@ -159,35 +140,40 @@ select {
     background: #2563eb;
 }
 
-#start {
-    background: #22c55e;
-}
-
-#start:hover {
-    background: #16a34a;
-}
-
-#stop {
-    background: #ef4444;
-}
-
-#stop:hover {
-    background: #dc2626;
-}
-
-#download {
-    background: #8b5cf6;
-}
-
-#download:hover {
-    background: #7c3aed;
-}
-
 .info {
     margin-top: 20px;
     color: #94a3b8;
     font-size: 0.85rem;
     line-height: 1.6;
+}
+
+.device-box {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.device-box h3 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+}
+
+.device-list {
+    margin: 0;
+    padding-left: 18px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.small-note {
+    margin-top: 8px;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    line-height: 1.5;
 }
 
 @media (max-width: 800px) {
@@ -221,7 +207,6 @@ select {
 </head>
 
 <body>
-
 <div class="container">
     <header>
         <h1>🎥 画面録画コントロールパネル</h1>
@@ -237,15 +222,24 @@ select {
             <h2>操作項目</h2>
 
             <div id="status" class="status">
-                操作画面です。下のボタンから各機能へ進みます。
+                操作画面です。下の項目を選んで録画ページへ進みます。
             </div>
 
             <div class="group">
-                <label for="storageType">保存先</label>
+                <label for="storageType">接続されているストレージ</label>
                 <select id="storageType">
                     <option value="internal">内部ストレージ</option>
-                    <option value="external">外部ストレージ（接続が確認できてるSSD、USB、SDカードなど）</option>
                 </select>
+            </div>
+
+            <div id="deviceBox" class="device-box">
+                <h3>接続中の外部ストレージ</h3>
+                <ul id="deviceList" class="device-list">
+                    <li>検知中...</li>
+                </ul>
+                <div class="small-note">
+                    ブラウザから取得できる接続機器を一覧表示します。USBやシリアル対応機器が対象です。
+                </div>
             </div>
 
             <div class="group">
@@ -269,13 +263,11 @@ select {
                 </select>
             </div>
 
-            <button id="to-save">保存先を作る</button>
-            <button id="to-record">録画の画質を実行して録画する</button>
+            <button id="to-record">この設定で録画を開始する</button>
 
             <p class="info">
                 この画面は操作用です。<br><br>
-                「保存先を作る」は保存先設定ページへ移動します。<br>
-                「録画の画質を実行して録画する」はFPSと解像度を選んで録画ページへ移動します。<br><br>
+                接続中の外部ストレージは、端末とブラウザが取得できる範囲で自動検知して表示します。<br>
                 保存前に容量が足りない場合は、
                 「お使いのストレージは保存できるほどの容量を満たしておりません」
                 を表示する構成にします。
@@ -291,16 +283,69 @@ if (sessionStorage.getItem("recording_authenticated") !== "true") {
 
 const logout = document.getElementById("logout");
 const status = document.getElementById("status");
-const toSave = document.getElementById("to-save");
 const toRecord = document.getElementById("to-record");
 const storageType = document.getElementById("storageType");
 const fpsType = document.getElementById("fpsType");
 const resolutionType = document.getElementById("resolutionType");
+const deviceList = document.getElementById("deviceList");
 
-toSave.addEventListener("click", () => {
-    sessionStorage.setItem("selected_storage", storageType.value);
-    window.location.href = "save.html";
-});
+function addOptionIfMissing(select, value, label) {
+    const exists = [...select.options].some((opt) => opt.value === value);
+    if (!exists) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = label;
+        select.appendChild(opt);
+    }
+}
+
+function renderDevices(items) {
+    deviceList.innerHTML = "";
+
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "接続中の外部ストレージは検出できません。";
+        deviceList.appendChild(li);
+        return;
+    }
+
+    items.forEach((name) => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        deviceList.appendChild(li);
+    });
+}
+
+async function detectConnectedDevices() {
+    const found = [];
+
+    try {
+        if (navigator.usb && navigator.usb.getDevices) {
+            const usbDevices = await navigator.usb.getDevices();
+            usbDevices.forEach((device) => {
+                const vendor = device.manufacturerName || "USB機器";
+                const product = device.productName || "不明な機器";
+                found.push(`USB: ${vendor} / ${product}`);
+            });
+        }
+    } catch (e) {}
+
+    try {
+        if (navigator.serial && navigator.serial.getPorts) {
+            const ports = await navigator.serial.getPorts();
+            ports.forEach((port, index) => {
+                const info = port.getInfo ? port.getInfo() : {};
+                const name = info.usbProductId || info.usbVendorId
+                    ? `Serial: 接続済みポート ${index + 1}`
+                    : `Serial: 接続済みポート ${index + 1}`;
+                found.push(name);
+            });
+        }
+    } catch (e) {}
+
+    const unique = [...new Set(found)];
+    renderDevices(unique);
+}
 
 toRecord.addEventListener("click", () => {
     sessionStorage.setItem("selected_storage", storageType.value);
@@ -313,7 +358,8 @@ logout.addEventListener("click", () => {
     sessionStorage.removeItem("recording_authenticated");
     window.location.href = "index.html";
 });
-</script>
 
+detectConnectedDevices();
+</script>
 </body>
 </html>
