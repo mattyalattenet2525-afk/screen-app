@@ -4,57 +4,41 @@ const path = require("path");
 
 const PORT = process.env.PORT || 10000;
 
-const ROOT = __dirname;
+// Renderで実際にアプリが起動している場所
+const ROOTS = [
+    process.cwd(),
+    __dirname,
+    "/opt/render/project/src"
+];
 
-// ファイルを再帰的に探す
-function findFile(dir, targetName) {
-    try {
-        const items = fs.readdirSync(dir, {
-            withFileTypes: true
-        });
 
-        for (const item of items) {
+// ================================
+// ファイルを探す
+// ================================
 
-            // node_modulesなどは検索しない
-            if (
-                item.name === "node_modules" ||
-                item.name === ".git"
-            ) {
-                continue;
-            }
+function findFile(fileName) {
 
-            const fullPath =
-                path.join(dir, item.name);
+    for (const root of ROOTS) {
 
-            if (item.isFile()) {
+        const directPath =
+            path.join(root, fileName);
 
-                if (
-                    item.name.toLowerCase() ===
-                    targetName.toLowerCase()
-                ) {
-                    return fullPath;
-                }
-
-            } else if (item.isDirectory()) {
-
-                const result =
-                    findFile(fullPath, targetName);
-
-                if (result) {
-                    return result;
-                }
-            }
+        if (
+            fs.existsSync(directPath) &&
+            fs.statSync(directPath).isFile()
+        ) {
+            return directPath;
         }
-
-    } catch (error) {
-        return null;
     }
 
     return null;
 }
 
 
+// ================================
 // MIMEタイプ
+// ================================
+
 const MIME_TYPES = {
     ".html": "text/html; charset=UTF-8",
     ".css": "text/css; charset=UTF-8",
@@ -78,39 +62,73 @@ const MIME_TYPES = {
 };
 
 
-// HTTPサーバー
+// ================================
+// ファイルを送信
+// ================================
+
+function sendFile(filePath, res) {
+
+    const extension =
+        path.extname(filePath).toLowerCase();
+
+    const contentType =
+        MIME_TYPES[extension] ||
+        "application/octet-stream";
+
+    res.writeHead(200, {
+        "Content-Type": contentType
+    });
+
+    fs.createReadStream(filePath).pipe(res);
+}
+
+
+// ================================
+// サーバー
+// ================================
+
 const server = http.createServer((req, res) => {
 
-    let requestedPath =
+    let url =
         decodeURIComponent(
             req.url.split("?")[0]
         );
 
-    console.log(
-        "Request:",
-        requestedPath
-    );
+    console.log("Request:", url);
 
 
+    // ================================
     // トップページ
-    if (requestedPath === "/") {
+    // ================================
+
+    if (url === "/") {
 
         const indexFile =
-            findFile(ROOT, "index.html");
+            findFile("index.html");
 
         if (!indexFile) {
 
-            res.writeHead(404, {
+            res.writeHead(500, {
                 "Content-Type":
                     "text/plain; charset=UTF-8"
             });
 
             res.end(
-                "index.html が見つかりません。"
+                "index.html が見つかりません。\n\n" +
+                "process.cwd(): " +
+                process.cwd() +
+                "\n\n" +
+                "__dirname: " +
+                __dirname
             );
 
             return;
         }
+
+        console.log(
+            "index.html:",
+            indexFile
+        );
 
         sendFile(indexFile, res);
 
@@ -118,14 +136,29 @@ const server = http.createServer((req, res) => {
     }
 
 
+    // ================================
+    // faviconなど
+    // ================================
+
+    if (url === "/favicon.ico") {
+
+        res.writeHead(204);
+        res.end();
+
+        return;
+    }
+
+
+    // ================================
     // URLからファイル名を取得
+    // ================================
+
     const fileName =
-        path.basename(requestedPath);
+        path.basename(url);
 
 
-    // GitHub内を再帰的に検索
     const filePath =
-        findFile(ROOT, fileName);
+        findFile(fileName);
 
 
     if (!filePath) {
@@ -136,39 +169,27 @@ const server = http.createServer((req, res) => {
         });
 
         res.end(
-            "File Not Found: " + fileName
+            "File Not Found: " +
+            fileName
         );
 
         return;
     }
 
 
+    console.log(
+        "File:",
+        filePath
+    );
+
     sendFile(filePath, res);
 });
 
 
-// ファイルをブラウザへ送信
-function sendFile(filePath, res) {
+// ================================
+// Render用サーバー起動
+// ================================
 
-    const extension =
-        path.extname(filePath).toLowerCase();
-
-    const contentType =
-        MIME_TYPES[extension] ||
-        "application/octet-stream";
-
-
-    res.writeHead(200, {
-        "Content-Type": contentType
-    });
-
-
-    fs.createReadStream(filePath)
-        .pipe(res);
-}
-
-
-// Renderで使用するポート
 server.listen(
     PORT,
     "0.0.0.0",
@@ -188,8 +209,13 @@ server.listen(
         );
 
         console.log(
-            "Root:",
-            ROOT
+            "process.cwd():",
+            process.cwd()
+        );
+
+        console.log(
+            "__dirname:",
+            __dirname
         );
 
         console.log(
