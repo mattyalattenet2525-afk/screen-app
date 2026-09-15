@@ -1,1 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>画面録画ツール - ログイン</title>
 
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 20px;
+
+    font-family:
+        Arial,
+        "Hiragino Kaku Gothic ProN",
+        Meiryo,
+        sans-serif;
+
+    color: white;
+
+    /* GitHubにアップロードした画像 */
+    background-image: url("login.jpg");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    background-attachment: fixed;
+}
+
+/* 背景を少し暗くする */
+body::before {
+    content: "";
+
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.20);
+
+    pointer-events: none;
+}
+
+/* ログインボックス */
+.container {
+    position: relative;
+    z-index: 1;
+
+    width: 100%;
+    max-width: 650px;
+
+    padding: 40px;
+
+    text-align: center;
+
+    background: rgba(15, 23, 42, 0.86);
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    border-radius: 15px;
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* タイトル */
+h1 {
+    margin: 0 0 15px;
+
+    font-size: 2rem;
+}
+
+/* 説明文 */
+.description {
+    margin: 0 0 30px;
+
+    color: #cbd5e1;
+
+    font-size: 1rem;
+}
+
+/* 入力エリア */
+.login-area {
+    width: 100%;
+    max-width: 500px;
+
+    margin: 0 auto;
+}
+
+/* パスワード入力 */
+input {
+    width: 100%;
+
+    padding: 14px 16px;
+
+    font-size: 1rem;
+
+    color: white;
+
+    background: #0f172a;
+
+    border: 1px solid #475569;
+
+    border-radius: 7px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+input::placeholder {
+    color: #94a3b8;
+}
+
+input:focus {
+    border-color: #3b82f6;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* 入室ボタン */
+button {
+    width: 100%;
+
+    padding: 14px;
+
+    margin-top: 12px;
+
+    font-size: 1rem;
+    font-weight: bold;
+
+    color: white;
+
+    background: #3b82f6;
+
+    border: none;
+
+    border-radius: 7px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        transform 0.1s;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+button:active {
+    transform: scale(0.99);
+}
+
+/* エラーメッセージ */
+.error {
+    min-height: 20px;
+
+    margin: 12px 0 0;
+
+    color: #ef4444;
+
+    font-size: 0.9rem;
+}
+
+/* スマートフォン対応 */
+@media (max-width: 600px) {
+
+    body {
+        padding: 15px;
+
+        background-attachment: scroll;
+    }
+
+    .container {
+        width: 100%;
+
+        padding: 30px 20px;
+
+        border-radius: 12px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .description {
+        font-size: 0.9rem;
+
+        margin-bottom: 25px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- パスワード入力画面 -->
+<div class="container">
+
+    <h1>🎥 画面録画ツール</h1>
+
+    <p class="description">
+        使用するにはパスワードを入力してください。
+    </p>
+
+    <div class="login-area">
+
+        <input
+            type="password"
+            id="password"
+            placeholder="パスワードを入力"
+            autocomplete="off"
+        >
+
+        <button id="login">
+            入室する
+        </button>
+
+        <p id="error" class="error"></p>
+
+    </div>
+
+</div>
+
+<script>
+
+/* =========================
+   パスワード設定
+   ========================= */
+
+const CORRECT_PASSWORD = "testpass";
+
+
+/* =========================
+   HTML要素を取得
+   ========================= */
+
+const passwordInput =
+    document.getElementById("password");
+
+const loginButton =
+    document.getElementById("login");
+
+const errorMessage =
+    document.getElementById("error");
+
+
+/* =========================
+   ログイン処理
+   ========================= */
+
+function loginCheck() {
+
+    const enteredPassword =
+        passwordInput.value;
+
+
+    /* パスワードが正しい場合 */
+
+    if (enteredPassword === CORRECT_PASSWORD) {
+
+        /*
+         * 認証済みであることを記録
+         */
+        sessionStorage.setItem(
+            "recording_authenticated",
+            "true"
+        );
+
+
+        /*
+         * 録画ページへ移動
+         */
+        window.location.href =
+            "recorder.html";
+
+
+        return;
+    }
+
+
+    /* =========================
+       パスワードが間違っている場合
+       ========================= */
+
+    errorMessage.textContent =
+        "パスワードが間違っています。";
+
+    passwordInput.value = "";
+
+    passwordInput.focus();
+}
+
+
+/* =========================
+   ボタンをクリック
+   ========================= */
+
+loginButton.addEventListener(
+    "click",
+    loginCheck
+);
+
+
+/* =========================
+   Enterキーでもログイン
+   ========================= */
+
+passwordInput.addEventListener(
+    "keydown",
+    (event) => {
+
+        if (event.key === "Enter") {
+            loginCheck();
+        }
+
+    }
+);
+
+</script>
+
+</body>
+</html>
