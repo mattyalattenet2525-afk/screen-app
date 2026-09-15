@@ -4,24 +4,23 @@ const path = require("path");
 
 const PORT = process.env.PORT || 10000;
 
-// Renderで実際にアプリが起動している場所
-const ROOTS = [
-    process.cwd(),
-    __dirname,
-    "/opt/render/project/src"
-];
-
-
 // ================================
-// ファイルを探す
+// ファイルを探す（修正版）
 // ================================
 
 function findFile(fileName) {
+    // 検索する候補のディレクトリを広く網羅する
+    const ROOTS = [
+        process.cwd(),
+        __dirname,
+        path.join(process.cwd(), "src"),
+        path.join(__dirname, "src"),
+        "/opt/render/project/src",
+        "/opt/render/project/src/src"
+    ];
 
     for (const root of ROOTS) {
-
-        const directPath =
-            path.join(root, fileName);
+        const directPath = path.join(root, fileName);
 
         if (
             fs.existsSync(directPath) &&
@@ -31,6 +30,34 @@ function findFile(fileName) {
         }
     }
 
+    // 万が一見つからない場合、再帰的に下層フォルダも探す
+    for (const root of ROOTS) {
+        if (fs.existsSync(root)) {
+            const found = searchRecursive(root, fileName);
+            if (found) return found;
+        }
+    }
+
+    return null;
+}
+
+// サブフォルダも含めて再帰的に探すヘルパー関数
+function searchRecursive(dir, targetName) {
+    try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                if (entry.name === "node_modules" || entry.name === ".git") continue;
+                const result = searchRecursive(fullPath, targetName);
+                if (result) return result;
+            } else if (entry.name.toLowerCase() === targetName.toLowerCase()) {
+                return fullPath;
+            }
+        }
+    } catch (e) {
+        // エラーは無視
+    }
     return null;
 }
 
