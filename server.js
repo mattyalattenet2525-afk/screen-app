@@ -5,7 +5,7 @@ const path = require("path");
 const PORT = process.env.PORT || 10000;
 
 // ================================
-// ファイルを探す
+// ファイルを探す（柔軟検索版）
 // ================================
 
 function findFile(fileName) {
@@ -18,20 +18,30 @@ function findFile(fileName) {
         "/opt/render/project/src/src"
     ];
 
-    for (const root of ROOTS) {
-        const directPath = path.join(root, fileName);
+    const targetName = fileName.toLowerCase();
 
-        if (
-            fs.existsSync(directPath) &&
-            fs.statSync(directPath).isFile()
-        ) {
-            return directPath;
+    for (const root of ROOTS) {
+        if (!fs.existsSync(root)) continue;
+
+        try {
+            const files = fs.readdirSync(root);
+            for (const file of files) {
+                if (file.toLowerCase() === targetName) {
+                    const fullPath = path.join(root, file);
+                    if (fs.statSync(fullPath).isFile()) {
+                        return fullPath;
+                    }
+                }
+            }
+        } catch (e) {
+            // 読み込みエラーはスキップ
         }
     }
 
+    // 再帰的検索
     for (const root of ROOTS) {
         if (fs.existsSync(root)) {
-            const found = searchRecursive(root, fileName);
+            const found = searchRecursive(root, targetName);
             if (found) return found;
         }
     }
@@ -48,7 +58,7 @@ function searchRecursive(dir, targetName) {
                 if (entry.name === "node_modules" || entry.name === ".git") continue;
                 const result = searchRecursive(fullPath, targetName);
                 if (result) return result;
-            } else if (entry.name.toLowerCase() === targetName.toLowerCase()) {
+            } else if (entry.name.toLowerCase() === targetName) {
                 return fullPath;
             }
         }
@@ -114,15 +124,6 @@ const server = http.createServer((req, res) => {
     // ================================
 
     if (url === "/") {
-
-        // デバッグ用：現在のフォルダの中身を取得
-        let dirContents = "";
-        try {
-            dirContents = "\n\n【現在のフォルダ内のファイル一覧】\n" + fs.readdirSync(process.cwd()).join("\n");
-        } catch (e) {
-            dirContents = "\n\nファイル一覧の取得に失敗: " + e.message;
-        }
-
         const indexFile = findFile("index.html");
 
         if (!indexFile) {
@@ -130,13 +131,7 @@ const server = http.createServer((req, res) => {
                 "Content-Type": "text/plain; charset=UTF-8"
             });
 
-            res.end(
-                "index.html が見つかりません。\n\n" +
-                "process.cwd(): " + process.cwd() + "\n\n" +
-                "__dirname: " + __dirname +
-                dirContents
-            );
-
+            res.end("index.html が見つかりません。");
             return;
         }
 
@@ -185,7 +180,5 @@ server.listen(PORT, "0.0.0.0", () => {
     console.log("================================");
     console.log("Screen App Server Started");
     console.log("Port:", PORT);
-    console.log("process.cwd():", process.cwd());
-    console.log("__dirname:", __dirname);
     console.log("================================");
 });
