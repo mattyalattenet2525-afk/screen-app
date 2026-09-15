@@ -29,34 +29,67 @@ const server = http.createServer((req, res) => {
 
     // トップページへのアクセス
     if (url === "/") {
-        const indexPath = path.join(process.cwd(), "index.html");
+        let indexPath = null;
 
-        if (fs.existsSync(indexPath)) {
-            console.log("Serving index.html from:", indexPath);
+        try {
+            const files = fs.readdirSync(process.cwd());
+            
+            // 1. "index" を含む .html ファイルを優先的に探す（大文字小文字無視）
+            for (const f of files) {
+                if (f.toLowerCase().includes("index") && f.toLowerCase().endsWith(".html")) {
+                    indexPath = path.join(process.cwd(), f);
+                    break;
+                }
+            }
+
+            // 2. なければ、フォルダ内にある最初の .html ファイルを使う
+            if (!indexPath) {
+                for (const f of files) {
+                    if (f.toLowerCase().endsWith(".html")) {
+                        indexPath = path.join(process.cwd(), f);
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Directory read error:", e);
+        }
+
+        if (indexPath && fs.existsSync(indexPath)) {
+            console.log("Serving HTML file from:", indexPath);
             res.writeHead(200, { "Content-Type": "text/html; charset=UTF-8" });
             fs.createReadStream(indexPath).pipe(res);
         } else {
-            console.log("index.html not found at:", indexPath);
             res.writeHead(500, { "Content-Type": "text/plain; charset=UTF-8" });
-            res.end("エラー: index.html が見つかりません（パス: " + indexPath + "）");
+            res.end("エラー: フォルダ内にHTMLファイルが見つかりません。");
         }
         return;
     }
 
-    // その他のファイル（CSS, JS, 画像など）
-    const fileName = path.basename(url);
-    const filePath = path.join(process.cwd(), fileName);
+    // その他のファイル（CSS, JS, 画像など）を柔軟に探す
+    const fileName = path.basename(url).toLowerCase();
+    let targetFilePath = null;
 
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-        const ext = path.extname(filePath).toLowerCase();
+    try {
+        const files = fs.readdirSync(process.cwd());
+        for (const f of files) {
+            if (f.toLowerCase() === fileName) {
+                targetFilePath = path.join(process.cwd(), f);
+                break;
+            }
+        }
+    } catch (e) {}
+
+    if (targetFilePath && fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).isFile()) {
+        const ext = path.extname(targetFilePath).toLowerCase();
         const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
-        console.log("Serving file:", filePath);
+        console.log("Serving file:", targetFilePath);
         res.writeHead(200, { "Content-Type": contentType });
-        fs.createReadStream(filePath).pipe(res);
+        fs.createReadStream(targetFilePath).pipe(res);
     } else {
         res.writeHead(404, { "Content-Type": "text/plain; charset=UTF-8" });
-        res.end("File Not Found: " + fileName);
+        res.end("File Not Found: " + path.basename(url));
     }
 });
 
