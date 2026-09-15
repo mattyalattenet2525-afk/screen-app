@@ -1,59 +1,127 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>画面録画ツール</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+画面録画ツール
 
-    <!-- パスワード入力画面（最初はこっちが表示される） -->
-    <div id="auth-screen" class="container">
-        <h2>使用するにはパスワードを入力してください</h2>
-        <div class="input-group">
-            <input type="password" id="password-input" placeholder="パスワードを入力">
-            <button id="login-btn">入室</button>
-        </div>
-        <p id="error-msg" class="error"></p>
+```
+    body.auth-bg {
+        background-image: url('IMG_0031.jpeg');
+    }
+
+    body.app-bg {
+        background-image: url('IMG_0312.jpeg');
+    }
+
+    .container {
+        background-color: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(6px);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    h2 {
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+    }
+
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    input[type="password"] {
+        padding: 12px;
+        font-size: 1rem;
+        border: 1px solid #475569;
+        border-radius: 6px;
+        background-color: #0f172a;
+        color: #fff;
+        outline: none;
+    }
+
+    input[type="password"]:focus {
+        border-color: #3b82f6;
+    }
+
+    button {
+        padding: 12px;
+        font-size: 1rem;
+        font-weight: bold;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    button:hover {
+        background-color: #2563eb;
+    }
+
+    .error {
+        color: #ef4444;
+        font-size: 0.85rem;
+        margin-top: 10px;
+        height: 1.2em;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+</style>
+
+```
+
+```
+<!-- パスワード入力画面 -->
+<div id="auth-screen" class="container">
+    <h2>使用するにはパスワードを入力してください</h2>
+    <div class="input-group">
+        <input type="password" id="password-input" placeholder="パスワードを入力">
+        <button id="login-btn">入室</button>
     </div>
+    <p id="error-msg" class="error"></p>
+</div>
 
-    <!-- 操作画面（パスワードが合致すると表示される） -->
-    <div id="app-screen" class="container hidden">
-        <h1>画面録画コントロールパネル</h1>
-        <p>認証成功！ここに録画開始ボタンなどを配置します。</p>
-        <button id="record-start-btn">画面録画を開始する</button>
-        <!-- 将来的にここに録画終了ボタンやクラウド連携の処理を追加していく -->
-    </div>
+<!-- 操作画面 -->
+<div id="app-screen" class="container hidden">
+    <h1>画面録画コントロールパネル</h1>
+    <p>認証成功！ここに録画開始ボタンなどを配置します。</p>
+    <button id="record-start-btn">画面録画を開始する</button>
+</div>
 
-    <script>
-        // 設定したいパスワード（必要に応じて変更してください）
-        const CORRECT_PASSWORD = "testpass";
+<script>
+    const CORRECT_PASSWORD = "testpass";
 
-        const authScreen = document.getElementById('auth-screen');
-        const appScreen = document.getElementById('app-screen');
-        const passwordInput = document.getElementById('password-input');
-        const loginBtn = document.getElementById('login-btn');
-        const errorMsg = document.getElementById('error-msg');
+    const pageBody = document.getElementById('page-body');
+    const authScreen = document.getElementById('auth-screen');
+    const appScreen = document.getElementById('app-screen');
+    const passwordInput = document.getElementById('password-input');
+    const loginBtn = document.getElementById('login-btn');
+    const errorMsg = document.getElementById('error-msg');
 
-        // ボタンが押されたとき、またはエンターキーが押されたときの処理
-        function checkPassword() {
-            if (passwordInput.value === CORRECT_PASSWORD) {
-                // パスワードが合っていれば認証画面を消して、操作画面を表示
-                authScreen.classList.add('hidden');
-                appScreen.classList.remove('hidden');
-            } else {
-                errorMsg.textContent = "パスワードが間違っています。";
-                passwordInput.value = "";
-            }
+    function checkPassword() {
+        if (passwordInput.value === CORRECT_PASSWORD) {
+            authScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            
+            pageBody.classList.remove('auth-bg');
+            pageBody.classList.add('app-bg');
+        } else {
+            errorMsg.textContent = "パスワードが間違っています。";
+            passwordInput.value = "";
         }
+    }
 
-        loginBtn.addEventListener('click', checkPassword);
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                checkPassword();
-            }
-        });
-    </script>
-</body>
-</html>
+    loginBtn.addEventListener('click', checkPassword);
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            checkPassword();
+        }
+    });
+</script>
+
+```
