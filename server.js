@@ -3,8 +3,12 @@ const fs = require("fs");
 const path = require("path");
 
 const PORT = process.env.PORT || 10000;
-
 const ROOT_DIR = process.cwd();
+
+const PUBLIC_DIR = fs.existsSync(path.join(ROOT_DIR, "public"))
+    ? path.join(ROOT_DIR, "public")
+    : ROOT_DIR;
+
 const RECORDINGS_DIR = path.join(ROOT_DIR, "recordings");
 const CHUNKS_DIR = path.join(ROOT_DIR, "chunks");
 
@@ -33,9 +37,7 @@ const sessions = new Map();
 
 function ensureDirectory(directoryPath) {
     if (!fs.existsSync(directoryPath)) {
-        fs.mkdirSync(directoryPath, {
-            recursive: true
-        });
+        fs.mkdirSync(directoryPath, { recursive: true });
     }
 }
 
@@ -75,6 +77,7 @@ function setCommonHeaders(res) {
 function isSafeFileName(fileName) {
     return (
         typeof fileName === "string" &&
+        fileName.length > 0 &&
         !fileName.includes("..") &&
         !fileName.includes("/") &&
         !fileName.includes("\\")
@@ -94,30 +97,17 @@ function deleteDirectoryRecursively(directoryPath) {
     }
 }
 
-function getReadableFileSize(bytes) {
-    if (bytes < 1024) {
-        return `${bytes} bytes`;
-    }
-
-    if (bytes < 1024 * 1024) {
-        return `${(bytes / 1024).toFixed(2)} KB`;
-    }
-
-    if (bytes < 1024 * 1024 * 1024) {
-        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    }
-
-    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
-
 function serveRootPage(res) {
-    const indexPath = path.join(ROOT_DIR, "index.html");
+    const indexPath = path.join(PUBLIC_DIR, "index.html");
+
+    console.log("Looking for index.html at:", indexPath);
 
     if (!fs.existsSync(indexPath)) {
         sendText(
             res,
             500,
-            "エラー: index.html が見つかりません。"
+            `エラー: index.html が見つかりません。
+検索場所: ${indexPath}`
         );
         return;
     }
@@ -139,7 +129,9 @@ function serveStaticFile(urlPath, res) {
         return;
     }
 
-    const filePath = path.join(ROOT_DIR, requestedName);
+    const filePath = path.join(PUBLIC_DIR, requestedName);
+
+    console.log("Looking for static file at:", filePath);
 
     if (
         !fs.existsSync(filePath) ||
@@ -168,8 +160,7 @@ function serveStaticFile(urlPath, res) {
 
 function handleUploadChunk(req, res) {
     const sessionId = req.headers["x-session-id"];
-    const chunkIndexText = req.headers["x-chunk-index"];
-    const chunkIndex = Number(chunkIndexText);
+    const chunkIndex = Number(req.headers["x-chunk-index"]);
 
     if (
         !sessionId ||
@@ -186,7 +177,6 @@ function handleUploadChunk(req, res) {
 
     if (!sessions.has(sessionId)) {
         const sessionDirectory = getSessionDirectory(sessionId);
-
         ensureDirectory(sessionDirectory);
 
         sessions.set(sessionId, {
@@ -208,13 +198,14 @@ function handleUploadChunk(req, res) {
     }
 
     const sessionDirectory = getSessionDirectory(sessionId);
-    const chunkFileName = `${String(chunkIndex).padStart(8, "0")}.webm.part`;
+    const chunkFileName =
+        `${String(chunkIndex).padStart(8, "0")}.webm.part`;
     const chunkPath = path.join(sessionDirectory, chunkFileName);
 
     const writeStream = fs.createWriteStream(chunkPath);
 
     let receivedBytes = 0;
-    let requestAborted = false;
+    let aborted = false;
 
     req.on("data", (data) => {
         receivedBytes += data.length;
@@ -224,8 +215,7 @@ function handleUploadChunk(req, res) {
             session.totalBytes + receivedBytes >
                 MAX_TOTAL_SESSION_SIZE_BYTES
         ) {
-            requestAborted = true;
-
+            aborted = true;
             req.destroy(
                 new Error("Chunk or session size limit exceeded")
             );
@@ -233,15 +223,15 @@ function handleUploadChunk(req, res) {
     });
 
     req.on("aborted", () => {
-        requestAborted = true;
+        aborted = true;
     });
 
     req.on("error", (error) => {
-        console.error("アップロード受信エラー:", error.message);
+        console.error("Upload request error:", error.message);
     });
 
     writeStream.on("error", (error) => {
-        console.error("チャンク書き込みエラー:", error.message);
+        console.error("Chunk write error:", error.message);
 
         if (!res.headersSent) {
             sendJson(res, 500, {
@@ -252,7 +242,7 @@ function handleUploadChunk(req, res) {
     });
 
     writeStream.on("finish", () => {
-        if (requestAborted) {
+        if (aborted) {
             if (fs.existsSync(chunkPath)) {
                 fs.unlinkSync(chunkPath);
             }
@@ -290,7 +280,11 @@ function handleUploadChunk(req, res) {
         session.totalBytes += receivedBytes;
 
         console.log(
-            `[UPLOAD] session=${sessionId} chunk=${chunkIndex} size=${getReadableFileSize(receivedBytes)} total=${getReadableFileSize(session.totalBytes)}`
+            "Chunk saved:",
+            sessionId,
+            chunkIndex,
+            receivedBytes,
+            "bytes"
         );
 
         sendJson(res, 200, {
@@ -316,8 +310,7 @@ function handleMerge(req, res) {
     ) {
         sendJson(res, 400, {
             ok: false,
-            error:
-                "結合対象の録画セッションが見つかりません。"
+            error: "結合対象の録画セッションが見つかりません。"
         });
 
         return;
@@ -325,10 +318,10 @@ function handleMerge(req, res) {
 
     const session = sessions.get(sessionId);
 
-    const chunkList = Array.from(session.chunks.values())
+    const chunks = Array.from(session.chunks.values())
         .sort((a, b) => a.index - b.index);
 
-    if (chunkList.length === 0) {
+    if (chunks.length === 0) {
         sendJson(res, 400, {
             ok: false,
             error: "結合する録画チャンクがありません。"
@@ -344,13 +337,17 @@ function handleMerge(req, res) {
     );
 
     const outputStream = fs.createWriteStream(finalFilePath);
+    let current = 0;
+    let totalBytes = 0;
+    let failed = false;
 
-    let currentIndex = 0;
-    let totalMergedBytes = 0;
-    let finished = false;
+    function fail(error) {
+        if (failed) {
+            return;
+        }
 
-    function failMerge(error) {
-        console.error("結合エラー:", error);
+        failed = true;
+        console.error("Merge error:", error);
 
         if (fs.existsSync(finalFilePath)) {
             fs.unlinkSync(finalFilePath);
@@ -364,39 +361,34 @@ function handleMerge(req, res) {
         }
     }
 
-    function pipeNextChunk() {
-        if (currentIndex >= chunkList.length) {
+    function pipeNext() {
+        if (current >= chunks.length) {
             outputStream.end();
             return;
         }
 
-        const chunk = chunkList[currentIndex];
+        const chunk = chunks[current];
         const chunkPath = path.join(
             getSessionDirectory(sessionId),
             chunk.fileName
         );
 
         if (!fs.existsSync(chunkPath)) {
-            failMerge(
-                new Error(
-                    `チャンクが見つかりません: ${chunk.fileName}`
-                )
-            );
-
+            fail(new Error(`チャンクがありません: ${chunk.fileName}`));
             return;
         }
 
         const inputStream = fs.createReadStream(chunkPath);
 
-        inputStream.on("data", (buffer) => {
-            totalMergedBytes += buffer.length;
+        inputStream.on("data", (data) => {
+            totalBytes += data.length;
         });
 
-        inputStream.on("error", failMerge);
+        inputStream.on("error", fail);
 
         inputStream.on("end", () => {
-            currentIndex += 1;
-            pipeNextChunk();
+            current += 1;
+            pipeNext();
         });
 
         inputStream.pipe(outputStream, {
@@ -404,14 +396,12 @@ function handleMerge(req, res) {
         });
     }
 
-    outputStream.on("error", failMerge);
+    outputStream.on("error", fail);
 
     outputStream.on("finish", () => {
-        if (finished) {
+        if (failed) {
             return;
         }
-
-        finished = true;
 
         deleteDirectoryRecursively(
             getSessionDirectory(sessionId)
@@ -419,29 +409,26 @@ function handleMerge(req, res) {
 
         sessions.delete(sessionId);
 
-        console.log(
-            `[MERGE] session=${sessionId} file=${finalFileName} size=${getReadableFileSize(totalMergedBytes)}`
-        );
-
         sendJson(res, 200, {
             ok: true,
             filename: finalFileName,
-            size: totalMergedBytes,
-            downloadUrl: `/recordings/${encodeURIComponent(finalFileName)}`
+            size: totalBytes,
+            downloadUrl:
+                `/recordings/${encodeURIComponent(finalFileName)}`
         });
     });
 
-    pipeNextChunk();
+    pipeNext();
 }
 
 function serveRecording(urlPath, res) {
-    const requestedName = path.basename(
+    const fileName = path.basename(
         decodeURIComponent(urlPath)
     );
 
     if (
-        !isSafeFileName(requestedName) ||
-        !requestedName.endsWith(".webm")
+        !isSafeFileName(fileName) ||
+        !fileName.endsWith(".webm")
     ) {
         sendText(res, 403, "Forbidden");
         return;
@@ -449,7 +436,7 @@ function serveRecording(urlPath, res) {
 
     const filePath = path.join(
         RECORDINGS_DIR,
-        requestedName
+        fileName
     );
 
     if (!fs.existsSync(filePath)) {
@@ -460,7 +447,7 @@ function serveRecording(urlPath, res) {
     res.writeHead(200, {
         "Content-Type": "video/webm",
         "Content-Disposition":
-            `inline; filename="${requestedName}"`,
+            `inline; filename="${fileName}"`,
         "Permissions-Policy": "display-capture=(self)",
         "X-Content-Type-Options": "nosniff"
     });
@@ -517,12 +504,10 @@ const server = http.createServer((req, res) => {
         urlPath.startsWith("/recordings/") &&
         req.method === "GET"
     ) {
-        const filePart = urlPath.replace(
-            "/recordings/",
-            ""
+        serveRecording(
+            urlPath.replace("/recordings/", ""),
+            res
         );
-
-        serveRecording(filePart, res);
         return;
     }
 
@@ -536,9 +521,9 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
     console.log("================================");
-    console.log(`Server running on port: ${PORT}`);
-    console.log(`Working Directory: ${ROOT_DIR}`);
-    console.log(`Recordings directory: ${RECORDINGS_DIR}`);
-    console.log(`Chunks directory: ${CHUNKS_DIR}`);
+    console.log("Server running on port:", PORT);
+    console.log("Working Directory:", ROOT_DIR);
+    console.log("Public Directory:", PUBLIC_DIR);
+    console.log("Index Path:", path.join(PUBLIC_DIR, "index.html"));
     console.log("================================");
 });
