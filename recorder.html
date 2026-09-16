@@ -140,6 +140,14 @@ select {
     background: #2563eb;
 }
 
+#select-storage {
+    background: #0ea5e9;
+}
+
+#select-storage:hover {
+    background: #0284c7;
+}
+
 .info {
     margin-top: 20px;
     color: #94a3b8;
@@ -226,19 +234,22 @@ select {
             </div>
 
             <div class="group">
-                <label for="storageType">接続されているストレージ</label>
+                <label for="storageType">保存先</label>
                 <select id="storageType">
                     <option value="internal">内部ストレージ</option>
+                    <option value="external">外部ストレージ（USB、SD カード、SSD）</option>
                 </select>
             </div>
+
+            <button id="select-storage">📁 外部ストレージを選択</button>
 
             <div id="deviceBox" class="device-box">
                 <h3>接続中の外部ストレージ</h3>
                 <ul id="deviceList" class="device-list">
-                    <li>検知中...</li>
+                    <li>「外部ストレージを選択」ボタンを押して選択してください</li>
                 </ul>
                 <div class="small-note">
-                    ブラウザから取得できる接続機器を一覧表示します。USBやシリアル対応機器が対象です。
+                    File System Access API 対応ブラウザ（Android Chrome など）で外部ストレージ（USB、SD カード、SSD）を選択できます。
                 </div>
             </div>
 
@@ -256,9 +267,9 @@ select {
                     <option value="256x144">144p：256 × 144px</option>
                     <option value="427x240">240p：427 × 240px（低画質・モバイル向け）</option>
                     <option value="640x360">360p：640 × 360px（低画質）</option>
-                    <option value="720x480">480p（SD）：720 × 480px（DVD相当）</option>
+                    <option value="720x480">480p（SD）：720 × 480px（DVD 相当）</option>
                     <option value="1280x720">720p（HD）：1280 × 720px（ハイビジョン）</option>
-                    <option value="1920x1080">1080p（フルHD / 2K）：1920 × 1080px（現在の標準・YouTube等）</option>
+                    <option value="1920x1080">1080p（フル HD / 2K）：1920 × 1080px（現在の標準・YouTube 等）</option>
                     <option value="2560x1440">1440p（WQHD / 2K）：2560 × 1440px（高解像度・ゲーム実況等）</option>
                 </select>
             </div>
@@ -267,7 +278,7 @@ select {
 
             <p class="info">
                 この画面は操作用です。<br><br>
-                接続中の外部ストレージは、端末とブラウザが取得できる範囲で自動検知して表示します。<br>
+                外部ストレージは File System Access API で選択します。<br>
                 保存前に容量が足りない場合は、
                 「お使いのストレージは保存できるほどの容量を満たしておりません」
                 を表示する構成にします。
@@ -287,17 +298,10 @@ const toRecord = document.getElementById("to-record");
 const storageType = document.getElementById("storageType");
 const fpsType = document.getElementById("fpsType");
 const resolutionType = document.getElementById("resolutionType");
+const selectStorageBtn = document.getElementById("select-storage");
 const deviceList = document.getElementById("deviceList");
 
-function addOptionIfMissing(select, value, label) {
-    const exists = [...select.options].some((opt) => opt.value === value);
-    if (!exists) {
-        const opt = document.createElement("option");
-        opt.value = value;
-        opt.textContent = label;
-        select.appendChild(opt);
-    }
-}
+let selectedDirectoryHandle = null;
 
 function renderDevices(items) {
     deviceList.innerHTML = "";
@@ -316,41 +320,41 @@ function renderDevices(items) {
     });
 }
 
-async function detectConnectedDevices() {
-    const found = [];
-
+async function selectExternalStorage() {
     try {
-        if (navigator.usb && navigator.usb.getDevices) {
-            const usbDevices = await navigator.usb.getDevices();
-            usbDevices.forEach((device) => {
-                const vendor = device.manufacturerName || "USB機器";
-                const product = device.productName || "不明な機器";
-                found.push(`USB: ${vendor} / ${product}`);
-            });
+        if (!window.showDirectoryPicker) {
+            alert("お使いのブラウザは File System Access API に対応していません。");
+            return;
         }
-    } catch (e) {}
 
-    try {
-        if (navigator.serial && navigator.serial.getPorts) {
-            const ports = await navigator.serial.getPorts();
-            ports.forEach((port, index) => {
-                const info = port.getInfo ? port.getInfo() : {};
-                const name = info.usbProductId || info.usbVendorId
-                    ? `Serial: 接続済みポート ${index + 1}`
-                    : `Serial: 接続済みポート ${index + 1}`;
-                found.push(name);
-            });
+        const dirHandle = await window.showDirectoryPicker({
+            mode: "readwrite"
+        });
+
+        selectedDirectoryHandle = dirHandle;
+        sessionStorage.setItem("external_storage_handle", "selected");
+        
+        renderDevices([`外部ストレージ：${dirHandle.name}`]);
+        status.textContent = `外部ストレージ「${dirHandle.name}」を選択しました`;
+    } catch (error) {
+        console.error(error);
+        if (error.name !== "AbortError") {
+            alert("外部ストレージの選択に失敗しました：" + error.message);
         }
-    } catch (e) {}
-
-    const unique = [...new Set(found)];
-    renderDevices(unique);
+    }
 }
+
+selectStorageBtn.addEventListener("click", selectExternalStorage);
 
 toRecord.addEventListener("click", () => {
     sessionStorage.setItem("selected_storage", storageType.value);
     sessionStorage.setItem("selected_fps", fpsType.value);
     sessionStorage.setItem("selected_resolution", resolutionType.value);
+    
+    if (storageType.value === "external" && selectedDirectoryHandle) {
+        sessionStorage.setItem("external_storage_selected", "true");
+    }
+    
     window.location.href = "record.html";
 });
 
@@ -359,7 +363,8 @@ logout.addEventListener("click", () => {
     window.location.href = "index.html";
 });
 
-detectConnectedDevices();
+// 初期表示
+renderDevices(["「外部ストレージを選択」ボタンを押して選択してください"]);
 </script>
 </body>
 </html>
