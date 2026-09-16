@@ -6,10 +6,7 @@
 <title>画面録画ツール - 操作画面</title>
 
 <style>
-* {
-    box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
 body {
     margin: 0;
     min-height: 100vh;
@@ -18,7 +15,6 @@ body {
     color: white;
     background: url("IMG_0312.jpeg") center / cover no-repeat;
 }
-
 .container {
     width: 94%;
     max-width: 1100px;
@@ -29,7 +25,6 @@ body {
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
-
 header {
     display: flex;
     justify-content: space-between;
@@ -37,12 +32,7 @@ header {
     gap: 20px;
     margin-bottom: 25px;
 }
-
-h1 {
-    margin: 0;
-    font-size: 1.6rem;
-}
-
+h1 { margin: 0; font-size: 1.6rem; }
 button {
     width: 100%;
     padding: 13px;
@@ -54,28 +44,19 @@ button {
     border-radius: 7px;
     cursor: pointer;
 }
-
-button:hover {
-    opacity: 0.92;
-}
-
+button:hover { opacity: 0.92; }
 #logout {
     width: auto;
     margin: 0;
     padding: 10px 18px;
     background: #64748b;
 }
-
-#logout:hover {
-    background: #475569;
-}
-
+#logout:hover { background: #475569; }
 .layout {
     display: grid;
     grid-template-columns: 1fr 320px;
     gap: 20px;
 }
-
 .preview-area {
     min-height: 450px;
     display: flex;
@@ -85,24 +66,18 @@ button:hover {
     background: rgba(0, 0, 0, 0.4);
     border-radius: 10px;
 }
-
 .preview-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
-
 .controls {
     padding: 20px;
     background: rgba(30, 41, 59, 0.85);
     border-radius: 10px;
 }
-
-.controls h2 {
-    margin-top: 0;
-}
-
+.controls h2 { margin-top: 0; }
 .status {
     padding: 12px;
     margin-bottom: 15px;
@@ -110,19 +85,14 @@ button:hover {
     background: rgba(15, 23, 42, 0.8);
     border-radius: 7px;
 }
-
-.group {
-    margin-top: 14px;
-}
-
+.group { margin-top: 14px; }
 .group label {
     display: block;
     margin-bottom: 8px;
     color: #cbd5e1;
     font-size: 0.92rem;
 }
-
-select {
+select, input {
     width: 100%;
     padding: 12px;
     border: 1px solid #334155;
@@ -131,30 +101,16 @@ select {
     color: white;
     outline: none;
 }
-
-#to-record {
-    background: #3b82f6;
-}
-
-#to-record:hover {
-    background: #2563eb;
-}
-
-#select-storage {
-    background: #0ea5e9;
-}
-
-#select-storage:hover {
-    background: #0284c7;
-}
-
+#to-record { background: #3b82f6; }
+#to-record:hover { background: #2563eb; }
+#select-storage { background: #0ea5e9; }
+#select-storage:hover { background: #0284c7; }
 .info {
     margin-top: 20px;
     color: #94a3b8;
     font-size: 0.85rem;
     line-height: 1.6;
 }
-
 .device-box {
     margin-top: 14px;
     padding: 12px;
@@ -162,13 +118,11 @@ select {
     border-radius: 8px;
     background: rgba(15, 23, 42, 0.65);
 }
-
 .device-box h3 {
     margin: 0 0 10px;
     font-size: 0.95rem;
     color: #e2e8f0;
 }
-
 .device-list {
     margin: 0;
     padding-left: 18px;
@@ -176,40 +130,26 @@ select {
     line-height: 1.7;
     word-break: break-word;
 }
-
 .small-note {
     margin-top: 8px;
     color: #94a3b8;
     font-size: 0.8rem;
     line-height: 1.5;
 }
-
+.user-info {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(30, 41, 59, 0.7);
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
 @media (max-width: 800px) {
-    body {
-        padding: 15px;
-    }
-
-    .container {
-        width: 100%;
-        padding: 20px;
-    }
-
-    header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    #logout {
-        width: 100%;
-    }
-
-    .layout {
-        grid-template-columns: 1fr;
-    }
-
-    .preview-area {
-        min-height: 240px;
-    }
+    body { padding: 15px; }
+    .container { width: 100%; padding: 20px; }
+    header { flex-direction: column; align-items: stretch; }
+    #logout { width: 100%; }
+    .layout { grid-template-columns: 1fr; }
+    .preview-area { min-height: 240px; }
 }
 </style>
 </head>
@@ -229,8 +169,27 @@ select {
         <section class="controls">
             <h2>操作項目</h2>
 
-            <div id="status" class="status">
-                操作画面です。下の項目を選んで録画ページへ進みます。
+            <div id="status" class="status">操作画面です</div>
+
+            <div class="user-info" id="userInfo">
+                ゲストモード
+            </div>
+
+            <div class="group">
+                <label for="cloudService">クラウドサービス</label>
+                <select id="cloudService">
+                    <option value="mega">MEGA</option>
+                    <option value="gdrive">Google Drive</option>
+                    <option value="dropbox">Dropbox</option>
+                    <option value="local">ローカル保存</option>
+                </select>
+            </div>
+
+            <div class="group" id="megaCredentials">
+                <label for="megaEmail">MEGA メール</label>
+                <input type="email" id="megaEmail" placeholder="mega@example.com" />
+                <label for="megaPassword" style="margin-top: 10px;">MEGA パスワード</label>
+                <input type="password" id="megaPassword" placeholder="パスワード" />
             </div>
 
             <div class="group">
@@ -249,12 +208,12 @@ select {
                     <li>「外部ストレージを選択」ボタンを押して選択してください</li>
                 </ul>
                 <div class="small-note">
-                    File System Access API 対応ブラウザ（Android Chrome など）で外部ストレージ（USB、SD カード、SSD）を選択できます。
+                    File System Access API 対応ブラウザ（Android Chrome など）で外部ストレージを選択できます。
                 </div>
             </div>
 
             <div class="group">
-                <label for="fpsType">録画開始項目 / FPS</label>
+                <label for="fpsType">FPS</label>
                 <select id="fpsType">
                     <option value="30">30FPS</option>
                     <option value="60">60FPS</option>
@@ -265,23 +224,20 @@ select {
                 <label for="resolutionType">解像度</label>
                 <select id="resolutionType">
                     <option value="256x144">144p：256 × 144px</option>
-                    <option value="427x240">240p：427 × 240px（低画質・モバイル向け）</option>
-                    <option value="640x360">360p：640 × 360px（低画質）</option>
-                    <option value="720x480">480p（SD）：720 × 480px（DVD 相当）</option>
-                    <option value="1280x720">720p（HD）：1280 × 720px（ハイビジョン）</option>
-                    <option value="1920x1080">1080p（フル HD / 2K）：1920 × 1080px（現在の標準・YouTube 等）</option>
-                    <option value="2560x1440">1440p（WQHD / 2K）：2560 × 1440px（高解像度・ゲーム実況等）</option>
+                    <option value="427x240">240p：427 × 240px</option>
+                    <option value="640x360">360p：640 × 360px</option>
+                    <option value="720x480">480p（SD）：720 × 480px</option>
+                    <option value="1280x720">720p（HD）：1280 × 720px</option>
+                    <option value="1920x1080">1080p（フル HD）：1920 × 1080px</option>
+                    <option value="2560x1440">1440p（WQHD）：2560 × 1440px</option>
                 </select>
             </div>
 
             <button id="to-record">この設定で録画を開始する</button>
 
             <p class="info">
-                この画面は操作用です。<br><br>
-                外部ストレージは File System Access API で選択します。<br>
-                保存前に容量が足りない場合は、
-                「お使いのストレージは保存できるほどの容量を満たしておりません」
-                を表示する構成にします。
+                クラウド設定は毎回入力します（ログイン時は保存）。<br>
+                外部ストレージは File System Access API で選択します。
             </p>
         </section>
     </div>
@@ -294,25 +250,37 @@ if (sessionStorage.getItem("recording_authenticated") !== "true") {
 
 const logout = document.getElementById("logout");
 const status = document.getElementById("status");
+const userInfo = document.getElementById("userInfo");
 const toRecord = document.getElementById("to-record");
 const storageType = document.getElementById("storageType");
 const fpsType = document.getElementById("fpsType");
 const resolutionType = document.getElementById("resolutionType");
+const cloudService = document.getElementById("cloudService");
+const megaEmail = document.getElementById("megaEmail");
+const megaPassword = document.getElementById("megaPassword");
 const selectStorageBtn = document.getElementById("select-storage");
 const deviceList = document.getElementById("deviceList");
+
+const userData = JSON.parse(localStorage.getItem("user_data") || "null");
+
+if (userData && userData.loggedIn) {
+    userInfo.textContent = `ログイン中：${userData.username}`;
+    megaEmail.value = localStorage.getItem("mega_email") || "";
+    megaPassword.value = localStorage.getItem("mega_password") || "";
+} else {
+    userInfo.textContent = "ゲストモード";
+}
 
 let selectedDirectoryHandle = null;
 
 function renderDevices(items) {
     deviceList.innerHTML = "";
-
     if (!items.length) {
         const li = document.createElement("li");
         li.textContent = "接続中の外部ストレージは検出できません。";
         deviceList.appendChild(li);
         return;
     }
-
     items.forEach((name) => {
         const li = document.createElement("li");
         li.textContent = name;
@@ -326,18 +294,11 @@ async function selectExternalStorage() {
             alert("お使いのブラウザは File System Access API に対応していません。");
             return;
         }
-
-        const dirHandle = await window.showDirectoryPicker({
-            mode: "readwrite"
-        });
-
+        const dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
         selectedDirectoryHandle = dirHandle;
-        sessionStorage.setItem("external_storage_handle", "selected");
-        
         renderDevices([`外部ストレージ：${dirHandle.name}`]);
         status.textContent = `外部ストレージ「${dirHandle.name}」を選択しました`;
     } catch (error) {
-        console.error(error);
         if (error.name !== "AbortError") {
             alert("外部ストレージの選択に失敗しました：" + error.message);
         }
@@ -350,6 +311,14 @@ toRecord.addEventListener("click", () => {
     sessionStorage.setItem("selected_storage", storageType.value);
     sessionStorage.setItem("selected_fps", fpsType.value);
     sessionStorage.setItem("selected_resolution", resolutionType.value);
+    sessionStorage.setItem("selected_cloud", cloudService.value);
+    sessionStorage.setItem("selected_mega_email", megaEmail.value);
+    sessionStorage.setItem("selected_mega_password", megaPassword.value);
+    
+    if (userData && userData.loggedIn) {
+        localStorage.setItem("mega_email", megaEmail.value);
+        localStorage.setItem("mega_password", megaPassword.value);
+    }
     
     if (storageType.value === "external" && selectedDirectoryHandle) {
         sessionStorage.setItem("external_storage_selected", "true");
@@ -359,11 +328,15 @@ toRecord.addEventListener("click", () => {
 });
 
 logout.addEventListener("click", () => {
+    if (userData && userData.loggedIn) {
+        localStorage.removeItem("user_data");
+        localStorage.removeItem("mega_email");
+        localStorage.removeItem("mega_password");
+    }
     sessionStorage.removeItem("recording_authenticated");
     window.location.href = "index.html";
 });
 
-// 初期表示
 renderDevices(["「外部ストレージを選択」ボタンを押して選択してください"]);
 </script>
 </body>
