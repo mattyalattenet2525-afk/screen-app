@@ -44,12 +44,7 @@ button {
     cursor: pointer;
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
-#logout {
-    width: auto;
-    margin: 0;
-    padding: 10px 18px;
-    background: #64748b;
-}
+#logout { width: auto; margin: 0; padding: 10px 18px; background: #64748b; }
 #logout:hover { background: #475569; }
 .layout {
     display: grid;
@@ -103,6 +98,8 @@ video {
 #stop:hover:not(:disabled) { background: #dc2626; }
 #merge { background: #8b5cf6; }
 #merge:hover:not(:disabled) { background: #7c3aed; }
+#save { background: #22c55e; }
+#save:hover:not(:disabled) { background: #16a34a; }
 #back { background: #64748b; }
 #back:hover { background: #475569; }
 .info {
@@ -127,37 +124,26 @@ video {
         <h1>🎥 録画中</h1>
         <button id="logout">ログアウト</button>
     </header>
-
     <div class="layout">
         <section class="preview-area">
-            <div id="no-preview" class="no-preview">
-                ここに録画した映像が表示されます。
-            </div>
+            <div id="no-preview" class="no-preview">ここに録画した映像が表示されます。</div>
             <video id="preview" class="hidden" controls></video>
         </section>
-
         <section class="controls">
             <h2>録画操作</h2>
-
             <div id="status" class="status">待機中</div>
-
-            <div class="settings-display" id="settingsDisplay">
-                設定読込中...
-            </div>
-
+            <div class="settings-display" id="settingsDisplay">設定読込中...</div>
             <button id="start">🎥 録画を開始</button>
             <button id="stop" disabled>⏹ 録画を停止</button>
             <button id="merge" disabled>📎 録画データを結合</button>
+            <button id="save" disabled>💾 保存</button>
             <button id="back">🔙 操作画面へ戻る</button>
-
             <p class="info">
-                「録画を開始」を押すと、録画する画面を選択できます。<br><br>
                 録画データは 1 分 30 秒ごとに分割され、クラウドへ送信されます。
             </p>
         </section>
     </div>
 </div>
-
 <script>
 if (sessionStorage.getItem("recording_authenticated") !== "true") {
     window.location.href = "index.html";
@@ -166,6 +152,7 @@ if (sessionStorage.getItem("recording_authenticated") !== "true") {
 const start = document.getElementById("start");
 const stop = document.getElementById("stop");
 const merge = document.getElementById("merge");
+const save = document.getElementById("save");
 const back = document.getElementById("back");
 const logout = document.getElementById("logout");
 const status = document.getElementById("status");
@@ -176,12 +163,18 @@ const settingsDisplay = document.getElementById("settingsDisplay");
 const fps = sessionStorage.getItem("selected_fps") || "30";
 const resolution = sessionStorage.getItem("selected_resolution") || "1280x720";
 const storage = sessionStorage.getItem("selected_storage") || "internal";
+const cloudService = sessionStorage.getItem("selected_cloud") || "mega";
+const cloudAccount = sessionStorage.getItem("cloud_account") || "";
+const cloudPassword = sessionStorage.getItem("cloud_password") || "";
+const cloudToken = sessionStorage.getItem("cloud_token") || "";
+const externalStorageSelected = sessionStorage.getItem("external_storage_selected") === "true";
 
 settingsDisplay.innerHTML = `
     <strong>現在の設定</strong><br>
     FPS: ${fps}FPS<br>
     解像度：${resolution}<br>
-    保存先：${storage === "internal" ? "内部ストレージ" : "外部ストレージ"}
+    保存先：${storage === "internal" ? "内部ストレージ" : (externalStorageSelected ? "外部ストレージ（選択済）" : "外部ストレージ（未選択）")}<br>
+    クラウド：${cloudService}
 `;
 
 let stream = null;
@@ -189,18 +182,14 @@ let recorder = null;
 let chunks = [];
 let recordedBlob = null;
 let chunkIndex = 0;
-const CHUNK_INTERVAL_MS = 90000; // 1 分 30 秒
+const CHUNK_INTERVAL_MS = 90000;
 let sessionId = null;
+let mergedBlob = null;
 
 const [width, height] = resolution.split("x").map(Number);
 
 function generateSessionId() {
-    return (
-        "session-" +
-        Date.now() +
-        "-" +
-        Math.random().toString(36).substring(2, 8)
-    );
+    return "session-" + Date.now() + "-" + Math.random().toString(36).substring(2, 8);
 }
 
 async function checkStorageSpace(requiredBytes) {
@@ -216,6 +205,7 @@ async function startRecording() {
         recordedBlob = null;
         chunkIndex = 0;
         sessionId = generateSessionId();
+        mergedBlob = null;
 
         stream = await navigator.mediaDevices.getDisplayMedia({
             video: { cursor: "motion", frameRate: Number(fps) },
@@ -239,14 +229,12 @@ async function startRecording() {
         recorder.ondataavailable = async (event) => {
             if (event.data && event.data.size > 0) {
                 chunks.push(event.data);
-                
                 const canSave = await checkStorageSpace(event.data.size);
                 if (!canSave) {
                     status.textContent = "⚠️ 保存先の容量が不足しています";
                     stopRecording();
                     return;
                 }
-                
                 await uploadChunk(event.data, chunkIndex++);
             }
         };
@@ -273,6 +261,7 @@ async function startRecording() {
         start.disabled = true;
         stop.disabled = false;
         merge.disabled = true;
+        save.disabled = true;
         status.textContent = "🔴 録画中";
         status.classList.add("recording");
     } catch (error) {
@@ -303,20 +292,13 @@ async function uploadChunk(blob, index) {
                 "X-Chunk-Index": index.toString()
             }
         });
-        
         if (response.status === 413) {
             status.textContent = "⚠️ クラウドストレージの容量制限に達しました";
             stopRecording();
             return;
         }
-        
         if (!response.ok) {
             console.warn("Upload failed for chunk");
-        }
-        
-        const result = await response.json().catch(() => ({}));
-        if (result.cloudUsagePercent && result.cloudUsagePercent >= 50) {
-            status.textContent = "⚠️ クラウド使用率が 50% を超えました";
         }
     } catch (e) {
         console.error("Upload error:", e);
@@ -325,26 +307,60 @@ async function uploadChunk(blob, index) {
 
 async function mergeRecording() {
     if (!sessionId) return;
-    
     merge.disabled = true;
     status.textContent = "結合中...";
-    
     try {
-        const response = await fetch("/merge", {
+        const response = await fetch("/merge-and-upload", {
             method: "POST",
             headers: {
-                "X-Session-Id": sessionId
+                "X-Session-Id": sessionId,
+                "X-Cloud-Service": cloudService,
+                "X-Cloud-Account": cloudAccount,
+                "X-Cloud-Password": cloudPassword,
+                "X-Cloud-Token": cloudToken
             }
         });
-        
         const result = await response.json();
         if (result.ok) {
+            mergedBlob = recordedBlob;
             status.textContent = `結合完了：${result.filename} (${result.size} bytes)`;
+            if (result.cloudUrl) {
+                status.textContent += `
+URL: ${result.cloudUrl}`;
+            }
+            save.disabled = false;
         } else {
             status.textContent = "結合に失敗しました";
         }
     } catch (e) {
         status.textContent = "エラー：" + e.message;
+    }
+}
+
+async function saveRecording() {
+    if (!mergedBlob) return;
+    try {
+        if (storage === "external" && window.showDirectoryPicker) {
+            const dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+            const filename = `rec-${Date.now()}.webm`;
+            const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(mergedBlob);
+            await writable.close();
+            status.textContent = `保存完了：${dirHandle.name}/${filename}`;
+        } else {
+            const url = URL.createObjectURL(mergedBlob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `rec-${Date.now()}.webm`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            status.textContent = "保存完了（ダウンロード）";
+        }
+    } catch (e) {
+        status.textContent = "保存エラー：" + e.message;
     }
 }
 
@@ -366,6 +382,7 @@ function doLogout() {
 start.addEventListener("click", startRecording);
 stop.addEventListener("click", stopRecording);
 merge.addEventListener("click", mergeRecording);
+save.addEventListener("click", saveRecording);
 back.addEventListener("click", goBack);
 logout.addEventListener("click", doLogout);
 </script>
