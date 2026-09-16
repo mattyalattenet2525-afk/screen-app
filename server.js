@@ -4,34 +4,13 @@ const path = require("path");
 
 const PORT = process.env.PORT || 10000;
 
-// recordings フォルダがなければ作成
-const RECORDINGS_DIR = path.join(process.cwd(), "recordings");
-if (!fs.existsSync(RECORDINGS_DIR)) {
-    fs.mkdirSync(RECORDINGS_DIR, { recursive: true });
-}
+const ROOT_DIR = process.cwd();
+const RECORDINGS_DIR = path.join(ROOT_DIR, "recordings");
+const CHUNKS_DIR = path.join(ROOT_DIR, "chunks");
 
-// chunks フォルダ（一時保存用）
-const CHUNKS_DIR = path.join(process.cwd(), "chunks");
-if (!fs.existsSync(CHUNKS_DIR)) {
-    fs.mkdirSync(CHUNKS_DIR, { recursive: true });
-}
+const MAX_CHUNK_SIZE_BYTES = 1024 * 1024 * 1024;
+const MAX_TOTAL_SESSION_SIZE_BYTES = 20 * 1024 * 1024 * 1024;
 
-// クラウドストレージ容量管理（例：10GB を 100% とする）
-const CLOUD_STORAGE_LIMIT_BYTES = 10 * 1024 * 1024 * 1024; // 10GB
-const CLOUD_STORAGE_WARNING_PERCENT = 50; // 50% で警告
-
-// 現在の使用量を管理（簡易実装）
-let currentCloudUsage = 0;
-
-function getCloudUsagePercent() {
-    return (currentCloudUsage / CLOUD_STORAGE_LIMIT_BYTES) * 100;
-}
-
-function updateCloudUsage(delta) {
-    currentCloudUsage = Math.max(0, currentCloudUsage + delta);
-}
-
-// MIME タイプの設定
 const MIME_TYPES = {
     ".html": "text/html; charset=UTF-8",
     ".css": "text/css; charset=UTF-8",
@@ -50,277 +29,516 @@ const MIME_TYPES = {
     ".wav": "audio/wav"
 };
 
-function generateFilename() {
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    return (
-        "rec-" +
-        now.getFullYear() +
-        pad(now.getMonth() + 1) +
-        pad(now.getDate()) +
-        "-" +
-        pad(now.getHours()) +
-        pad(now.getMinutes()) +
-        pad(now.getSeconds()) +
-        ".webm"
-    );
-}
-
-function generateSessionId() {
-    return (
-        "session-" +
-        Date.now() +
-        "-" +
-        Math.random().toString(36).substring(2, 8)
-    );
-}
-
-// セッション管理（メモリ上）
 const sessions = new Map();
 
+function ensureDirectory(directoryPath) {
+    if (!fs.existsSync(directoryPath)) {
+        fs.mkdirSync(directoryPath, {
+            recursive: true
+        });
+    }
+}
+
+ensureDirectory(RECORDINGS_DIR);
+ensureDirectory(CHUNKS_DIR);
+
+function sendJson(res, statusCode, data) {
+    res.writeHead(statusCode, {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Permissions-Policy": "display-capture=(self)"
+    });
+
+    res.end(JSON.stringify(data));
+}
+
+function sendText(res, statusCode, text) {
+    res.writeHead(statusCode, {
+        "Content-Type": "text/plain; charset=UTF-8",
+        "Permissions-Policy": "display-capture=(self)"
+    });
+
+    res.end(text);
+}
+
+function setCommonHeaders(res) {
+    res.setHeader(
+        "Permissions-Policy",
+        "display-capture=(self)"
+    );
+
+    res.setHeader(
+        "X-Content-Type-Options",
+        "nosniff"
+    );
+}
+
+function isSafeFileName(fileName) {
+    return (
+        typeof fileName === "string" &&
+        !fileName.includes("..") &&
+        !fileName.includes("/") &&
+        !fileName.includes("\\")
+    );
+}
+
+function getSessionDirectory(sessionId) {
+    return path.join(CHUNKS_DIR, sessionId);
+}
+
+function deleteDirectoryRecursively(directoryPath) {
+    if (fs.existsSync(directoryPath)) {
+        fs.rmSync(directoryPath, {
+            recursive: true,
+            force: true
+        });
+    }
+}
+
+function getReadableFileSize(bytes) {
+    if (bytes < 1024) {
+        return `${bytes} bytes`;
+    }
+
+    if (bytes < 1024 * 1024) {
+        return `${(bytes / 1024).toFixed(2)} KB`;
+    }
+
+    if (bytes < 1024 * 1024 * 1024) {
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+function serveRootPage(res) {
+    const indexPath = path.join(ROOT_DIR, "index.html");
+
+    if (!fs.existsSync(indexPath)) {
+        sendText(
+            res,
+            500,
+            "エラー: index.html が見つかりません。"
+        );
+        return;
+    }
+
+    res.writeHead(200, {
+        "Content-Type": "text/html; charset=UTF-8",
+        "Permissions-Policy": "display-capture=(self)",
+        "X-Content-Type-Options": "nosniff"
+    });
+
+    fs.createReadStream(indexPath).pipe(res);
+}
+
+function serveStaticFile(urlPath, res) {
+    const requestedName = path.basename(urlPath);
+
+    if (!isSafeFileName(requestedName)) {
+        sendText(res, 403, "Forbidden");
+        return;
+    }
+
+    const filePath = path.join(ROOT_DIR, requestedName);
+
+    if (
+        !fs.existsSync(filePath) ||
+        !fs.statSync(filePath).isFile()
+    ) {
+        sendText(
+            res,
+            404,
+            `File Not Found: ${requestedName}`
+        );
+        return;
+    }
+
+    const extension = path.extname(filePath).toLowerCase();
+    const contentType =
+        MIME_TYPES[extension] || "application/octet-stream";
+
+    res.writeHead(200, {
+        "Content-Type": contentType,
+        "Permissions-Policy": "display-capture=(self)",
+        "X-Content-Type-Options": "nosniff"
+    });
+
+    fs.createReadStream(filePath).pipe(res);
+}
+
+function handleUploadChunk(req, res) {
+    const sessionId = req.headers["x-session-id"];
+    const chunkIndexText = req.headers["x-chunk-index"];
+    const chunkIndex = Number(chunkIndexText);
+
+    if (
+        !sessionId ||
+        !isSafeFileName(sessionId) ||
+        !Number.isInteger(chunkIndex) ||
+        chunkIndex < 0
+    ) {
+        sendJson(res, 400, {
+            ok: false,
+            error: "セッションIDまたはチャンク番号が正しくありません。"
+        });
+        return;
+    }
+
+    if (!sessions.has(sessionId)) {
+        const sessionDirectory = getSessionDirectory(sessionId);
+
+        ensureDirectory(sessionDirectory);
+
+        sessions.set(sessionId, {
+            sessionId,
+            createdAt: Date.now(),
+            totalBytes: 0,
+            chunks: new Map()
+        });
+    }
+
+    const session = sessions.get(sessionId);
+
+    if (session.chunks.has(chunkIndex)) {
+        sendJson(res, 409, {
+            ok: false,
+            error: "同じチャンク番号がすでに保存されています。"
+        });
+        return;
+    }
+
+    const sessionDirectory = getSessionDirectory(sessionId);
+    const chunkFileName = `${String(chunkIndex).padStart(8, "0")}.webm.part`;
+    const chunkPath = path.join(sessionDirectory, chunkFileName);
+
+    const writeStream = fs.createWriteStream(chunkPath);
+
+    let receivedBytes = 0;
+    let requestAborted = false;
+
+    req.on("data", (data) => {
+        receivedBytes += data.length;
+
+        if (
+            receivedBytes > MAX_CHUNK_SIZE_BYTES ||
+            session.totalBytes + receivedBytes >
+                MAX_TOTAL_SESSION_SIZE_BYTES
+        ) {
+            requestAborted = true;
+
+            req.destroy(
+                new Error("Chunk or session size limit exceeded")
+            );
+        }
+    });
+
+    req.on("aborted", () => {
+        requestAborted = true;
+    });
+
+    req.on("error", (error) => {
+        console.error("アップロード受信エラー:", error.message);
+    });
+
+    writeStream.on("error", (error) => {
+        console.error("チャンク書き込みエラー:", error.message);
+
+        if (!res.headersSent) {
+            sendJson(res, 500, {
+                ok: false,
+                error: "チャンクファイルの保存に失敗しました。"
+            });
+        }
+    });
+
+    writeStream.on("finish", () => {
+        if (requestAborted) {
+            if (fs.existsSync(chunkPath)) {
+                fs.unlinkSync(chunkPath);
+            }
+
+            if (!res.headersSent) {
+                sendJson(res, 413, {
+                    ok: false,
+                    error:
+                        "チャンクまたは録画全体のサイズが上限を超えました。"
+                });
+            }
+
+            return;
+        }
+
+        if (receivedBytes === 0) {
+            if (fs.existsSync(chunkPath)) {
+                fs.unlinkSync(chunkPath);
+            }
+
+            sendJson(res, 400, {
+                ok: false,
+                error: "空の録画チャンクは保存できません。"
+            });
+
+            return;
+        }
+
+        session.chunks.set(chunkIndex, {
+            index: chunkIndex,
+            fileName: chunkFileName,
+            size: receivedBytes
+        });
+
+        session.totalBytes += receivedBytes;
+
+        console.log(
+            `[UPLOAD] session=${sessionId} chunk=${chunkIndex} size=${getReadableFileSize(receivedBytes)} total=${getReadableFileSize(session.totalBytes)}`
+        );
+
+        sendJson(res, 200, {
+            ok: true,
+            sessionId,
+            chunkIndex,
+            size: receivedBytes,
+            totalBytes: session.totalBytes,
+            chunkCount: session.chunks.size
+        });
+    });
+
+    req.pipe(writeStream);
+}
+
+function handleMerge(req, res) {
+    const sessionId = req.headers["x-session-id"];
+
+    if (
+        !sessionId ||
+        !isSafeFileName(sessionId) ||
+        !sessions.has(sessionId)
+    ) {
+        sendJson(res, 400, {
+            ok: false,
+            error:
+                "結合対象の録画セッションが見つかりません。"
+        });
+
+        return;
+    }
+
+    const session = sessions.get(sessionId);
+
+    const chunkList = Array.from(session.chunks.values())
+        .sort((a, b) => a.index - b.index);
+
+    if (chunkList.length === 0) {
+        sendJson(res, 400, {
+            ok: false,
+            error: "結合する録画チャンクがありません。"
+        });
+
+        return;
+    }
+
+    const finalFileName = `${sessionId}.webm`;
+    const finalFilePath = path.join(
+        RECORDINGS_DIR,
+        finalFileName
+    );
+
+    const outputStream = fs.createWriteStream(finalFilePath);
+
+    let currentIndex = 0;
+    let totalMergedBytes = 0;
+    let finished = false;
+
+    function failMerge(error) {
+        console.error("結合エラー:", error);
+
+        if (fs.existsSync(finalFilePath)) {
+            fs.unlinkSync(finalFilePath);
+        }
+
+        if (!res.headersSent) {
+            sendJson(res, 500, {
+                ok: false,
+                error: "録画データの結合に失敗しました。"
+            });
+        }
+    }
+
+    function pipeNextChunk() {
+        if (currentIndex >= chunkList.length) {
+            outputStream.end();
+            return;
+        }
+
+        const chunk = chunkList[currentIndex];
+        const chunkPath = path.join(
+            getSessionDirectory(sessionId),
+            chunk.fileName
+        );
+
+        if (!fs.existsSync(chunkPath)) {
+            failMerge(
+                new Error(
+                    `チャンクが見つかりません: ${chunk.fileName}`
+                )
+            );
+
+            return;
+        }
+
+        const inputStream = fs.createReadStream(chunkPath);
+
+        inputStream.on("data", (buffer) => {
+            totalMergedBytes += buffer.length;
+        });
+
+        inputStream.on("error", failMerge);
+
+        inputStream.on("end", () => {
+            currentIndex += 1;
+            pipeNextChunk();
+        });
+
+        inputStream.pipe(outputStream, {
+            end: false
+        });
+    }
+
+    outputStream.on("error", failMerge);
+
+    outputStream.on("finish", () => {
+        if (finished) {
+            return;
+        }
+
+        finished = true;
+
+        deleteDirectoryRecursively(
+            getSessionDirectory(sessionId)
+        );
+
+        sessions.delete(sessionId);
+
+        console.log(
+            `[MERGE] session=${sessionId} file=${finalFileName} size=${getReadableFileSize(totalMergedBytes)}`
+        );
+
+        sendJson(res, 200, {
+            ok: true,
+            filename: finalFileName,
+            size: totalMergedBytes,
+            downloadUrl: `/recordings/${encodeURIComponent(finalFileName)}`
+        });
+    });
+
+    pipeNextChunk();
+}
+
+function serveRecording(urlPath, res) {
+    const requestedName = path.basename(
+        decodeURIComponent(urlPath)
+    );
+
+    if (
+        !isSafeFileName(requestedName) ||
+        !requestedName.endsWith(".webm")
+    ) {
+        sendText(res, 403, "Forbidden");
+        return;
+    }
+
+    const filePath = path.join(
+        RECORDINGS_DIR,
+        requestedName
+    );
+
+    if (!fs.existsSync(filePath)) {
+        sendText(res, 404, "Recording Not Found");
+        return;
+    }
+
+    res.writeHead(200, {
+        "Content-Type": "video/webm",
+        "Content-Disposition":
+            `inline; filename="${requestedName}"`,
+        "Permissions-Policy": "display-capture=(self)",
+        "X-Content-Type-Options": "nosniff"
+    });
+
+    fs.createReadStream(filePath).pipe(res);
+}
+
 const server = http.createServer((req, res) => {
-    let url = decodeURIComponent(req.url.split("?")[0]);
-    console.log("Request URL:", url, "Method:", req.method);
+    setCommonHeaders(res);
 
-    // CORS ヘッダー（必要に応じて）
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Session-Id, X-Chunk-Index");
+    const urlPath = decodeURIComponent(
+        req.url.split("?")[0]
+    );
 
-    // OPTIONS リクエスト（CORS プリフライト）
+    console.log(
+        `[REQUEST] ${req.method} ${urlPath}`
+    );
+
     if (req.method === "OPTIONS") {
-        res.writeHead(204);
+        res.writeHead(204, {
+            "Access-Control-Allow-Methods":
+                "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers":
+                "Content-Type, X-Session-Id, X-Chunk-Index",
+            "Permissions-Policy": "display-capture=(self)"
+        });
+
         res.end();
         return;
     }
 
-    // トップページへのアクセス
-    if (url === "/" && req.method === "GET") {
-        let indexPath = null;
-
-        try {
-            const files = fs.readdirSync(process.cwd());
-            
-            for (const f of files) {
-                if (f.toLowerCase().includes("index") && f.toLowerCase().endsWith(".html")) {
-                    indexPath = path.join(process.cwd(), f);
-                    break;
-                }
-            }
-
-            if (!indexPath) {
-                for (const f of files) {
-                    if (f.toLowerCase().endsWith(".html")) {
-                        indexPath = path.join(process.cwd(), f);
-                        break;
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Directory read error:", e);
-        }
-
-        if (indexPath && fs.existsSync(indexPath)) {
-            console.log("Serving HTML file from:", indexPath);
-            res.writeHead(200, { "Content-Type": "text/html; charset=UTF-8" });
-            fs.createReadStream(indexPath).pipe(res);
-        } else {
-            res.writeHead(500, { "Content-Type": "text/plain; charset=UTF-8" });
-            res.end("エラー: フォルダ内に HTML ファイルが見つかりません。");
-        }
+    if (urlPath === "/" && req.method === "GET") {
+        serveRootPage(res);
         return;
     }
 
-    // チャンクアップロード受け口
-    if (url === "/upload-chunk" && req.method === "POST") {
-        const sessionId = req.headers["x-session-id"];
-        const chunkIndex = parseInt(req.headers["x-chunk-index"] || "0");
-        
-        if (!sessionId) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "Missing session ID" }));
-            return;
-        }
-
-        // クラウド容量チェック（50% 超えは拒否）
-        if (getCloudUsagePercent() >= CLOUD_STORAGE_WARNING_PERCENT) {
-            res.writeHead(413, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ 
-                ok: false, 
-                error: "Cloud storage limit exceeded (50%)",
-                usagePercent: getCloudUsagePercent()
-            }));
-            return;
-        }
-
-        // セッション初期化
-        if (!sessions.has(sessionId)) {
-            sessions.set(sessionId, {
-                chunks: [],
-                startTime: Date.now(),
-                totalBytes: 0
-            });
-        }
-
-        const session = sessions.get(sessionId);
-        const chunks = [];
-        let receivedBytes = 0;
-
-        req.on("data", (chunk) => {
-            receivedBytes += chunk.length;
-            chunks.push(chunk);
-        });
-
-        req.on("end", () => {
-            const buffer = Buffer.concat(chunks);
-            const chunkFilename = `${sessionId}-chunk-${chunkIndex}.dat`;
-            const chunkPath = path.join(CHUNKS_DIR, chunkFilename);
-
-            // チャンクを保存
-            fs.writeFileSync(chunkPath, buffer);
-
-            // セッション情報更新
-            session.chunks.push({ index: chunkIndex, filename: chunkFilename, size: buffer.length });
-            session.totalBytes += buffer.length;
-
-            // クラウド使用量更新
-            updateCloudUsage(buffer.length);
-
-            console.log(`Chunk ${chunkIndex} saved: ${chunkFilename} (${buffer.length} bytes)`);
-
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({
-                ok: true,
-                chunkIndex: chunkIndex,
-                size: buffer.length,
-                cloudUsagePercent: getCloudUsagePercent()
-            }));
-        });
-
-        req.on("error", (err) => {
-            console.error("Chunk upload error:", err);
-            res.writeHead(500, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "upload failed" }));
-        });
-
+    if (
+        urlPath === "/upload-chunk" &&
+        req.method === "POST"
+    ) {
+        handleUploadChunk(req, res);
         return;
     }
 
-    // 結合エンドポイント
-    if (url === "/merge" && req.method === "POST") {
-        const sessionId = req.headers["x-session-id"];
-        
-        if (!sessionId || !sessions.has(sessionId)) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "Invalid session ID" }));
-            return;
-        }
+    if (
+        urlPath === "/merge" &&
+        req.method === "POST"
+    ) {
+        handleMerge(req, res);
+        return;
+    }
 
-        const session = sessions.get(sessionId);
-        const chunkFiles = session.chunks.sort((a, b) => a.index - b.index);
-
-        // チャンクを読み込んで結合
-        const buffers = chunkFiles.map(c => 
-            fs.readFileSync(path.join(CHUNKS_DIR, c.filename))
+    if (
+        urlPath.startsWith("/recordings/") &&
+        req.method === "GET"
+    ) {
+        const filePart = urlPath.replace(
+            "/recordings/",
+            ""
         );
-        const combined = Buffer.concat(buffers);
 
-        // 1 つのファイルとして保存
-        const finalFilename = `${sessionId}.webm`;
-        const finalPath = path.join(RECORDINGS_DIR, finalFilename);
-        fs.writeFileSync(finalPath, combined);
-
-        // クラウド使用量更新（チャンク削除分を減算）
-        updateCloudUsage(-session.totalBytes);
-
-        // チャンクファイルを削除
-        chunkFiles.forEach(c => {
-            const chunkPath = path.join(CHUNKS_DIR, c.filename);
-            if (fs.existsSync(chunkPath)) {
-                fs.unlinkSync(chunkPath);
-            }
-        });
-
-        // セッション削除
-        sessions.delete(sessionId);
-
-        console.log(`Merged: ${finalFilename} (${combined.length} bytes)`);
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({
-            ok: true,
-            filename: finalFilename,
-            size: combined.length
-        }));
+        serveRecording(filePart, res);
         return;
     }
 
-    // 録画データアップロード受け口（旧）
-    if (url === "/upload" && req.method === "POST") {
-        const filename = generateFilename();
-        const filePath = path.join(RECORDINGS_DIR, filename);
-        const writeStream = fs.createWriteStream(filePath);
-        let receivedBytes = 0;
-
-        req.on("data", (chunk) => {
-            receivedBytes += chunk.length;
-        });
-
-        req.on("end", () => {
-            writeStream.end();
-            console.log("Upload complete:", filename, receivedBytes, "bytes");
-            res.writeHead(200, { "Content-Type": "application/json; charset=UTF-8" });
-            res.end(JSON.stringify({
-                ok: true,
-                filename: filename,
-                size: receivedBytes
-            }));
-        });
-
-        req.on("error", (err) => {
-            console.error("Upload error:", err);
-            writeStream.end();
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-            res.writeHead(500, { "Content-Type": "application/json; charset=UTF-8" });
-            res.end(JSON.stringify({ ok: false, error: "upload failed" }));
-        });
-
-        req.pipe(writeStream);
+    if (req.method === "GET") {
+        serveStaticFile(urlPath, res);
         return;
     }
 
-    // その他のファイル（CSS, JS, 画像など）を柔軟に探す
-    const fileName = path.basename(url).toLowerCase();
-    let targetFilePath = null;
-
-    try {
-        const files = fs.readdirSync(process.cwd());
-        for (const f of files) {
-            if (f.toLowerCase() === fileName) {
-                targetFilePath = path.join(process.cwd(), f);
-                break;
-            }
-        }
-    } catch (e) {}
-
-    if (targetFilePath && fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).isFile()) {
-        const ext = path.extname(targetFilePath).toLowerCase();
-        const contentType = MIME_TYPES[ext] || "application/octet-stream";
-
-        console.log("Serving file:", targetFilePath);
-        res.writeHead(200, { "Content-Type": contentType });
-        fs.createReadStream(targetFilePath).pipe(res);
-    } else {
-        res.writeHead(404, { "Content-Type": "text/plain; charset=UTF-8" });
-        res.end("File Not Found: " + path.basename(url));
-    }
+    sendText(res, 405, "Method Not Allowed");
 });
 
 server.listen(PORT, "0.0.0.0", () => {
     console.log("================================");
-    console.log("Server running on port:", PORT);
-    console.log("Working Directory:", process.cwd());
+    console.log(`Server running on port: ${PORT}`);
+    console.log(`Working Directory: ${ROOT_DIR}`);
+    console.log(`Recordings directory: ${RECORDINGS_DIR}`);
+    console.log(`Chunks directory: ${CHUNKS_DIR}`);
     console.log("================================");
 });
