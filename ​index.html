@@ -1,345 +1,163 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>画面録画ツール - ログイン</title>
-
 <style>
-* {
-    box-sizing: border-box;
-}
-
-html,
+* { box-sizing: border-box; }
 body {
     margin: 0;
-    width: 100%;
-    min-height: 100%;
-}
-
-body {
     min-height: 100vh;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    padding: 20px;
-
-    font-family:
-        Arial,
-        "Hiragino Kaku Gothic ProN",
-        Meiryo,
-        sans-serif;
-
+    display: grid;
+    place-items: center;
+    font-family: Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: white;
-
-    /* GitHubにアップロードした画像 */
-    background-image: url("login.jpg");
-
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-
-    background-attachment: fixed;
+    padding: 20px;
 }
-
-/* 背景を少し暗くする */
-body::before {
-    content: "";
-
-    position: fixed;
-    inset: 0;
-
-    background: rgba(0, 0, 0, 0.20);
-
-    pointer-events: none;
-}
-
-/* ログインボックス */
 .container {
-    position: relative;
-    z-index: 1;
-
     width: 100%;
-    max-width: 650px;
-
-    padding: 40px;
-
-    text-align: center;
-
-    background: rgba(15, 23, 42, 0.86);
-
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-
-    border: 1px solid rgba(255, 255, 255, 0.15);
-
-    border-radius: 15px;
-
-    box-shadow:
-        0 10px 30px rgba(0, 0, 0, 0.5);
+    max-width: 420px;
+    background: rgba(15, 23, 42, 0.95);
+    padding: 40px 30px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
-
-/* タイトル */
 h1 {
-    margin: 0 0 15px;
-
-    font-size: 2rem;
-}
-
-/* 説明文 */
-.description {
     margin: 0 0 30px;
-
+    text-align: center;
+    font-size: 1.8rem;
+}
+.form-group {
+    margin-bottom: 20px;
+}
+label {
+    display: block;
+    margin-bottom: 8px;
     color: #cbd5e1;
-
-    font-size: 1rem;
+    font-size: 0.95rem;
 }
-
-/* 入力エリア */
-.login-area {
-    width: 100%;
-    max-width: 500px;
-
-    margin: 0 auto;
-}
-
-/* パスワード入力 */
 input {
     width: 100%;
-
-    padding: 14px 16px;
-
-    font-size: 1rem;
-
-    color: white;
-
+    padding: 14px;
+    border: 1px solid #334155;
+    border-radius: 8px;
     background: #0f172a;
-
-    border: 1px solid #475569;
-
-    border-radius: 7px;
-
+    color: white;
+    font-size: 1rem;
     outline: none;
-
-    transition:
-        border-color 0.2s,
-        box-shadow 0.2s;
 }
-
-input::placeholder {
-    color: #94a3b8;
-}
-
 input:focus {
     border-color: #3b82f6;
-
-    box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.2);
 }
-
-/* 入室ボタン */
 button {
     width: 100%;
-
     padding: 14px;
-
-    margin-top: 12px;
-
+    border: none;
+    border-radius: 8px;
     font-size: 1rem;
     font-weight: bold;
-
     color: white;
-
-    background: #3b82f6;
-
-    border: none;
-
-    border-radius: 7px;
-
     cursor: pointer;
-
-    transition:
-        background 0.2s,
-        transform 0.1s;
+    margin-top: 10px;
 }
-
-button:hover {
+#loginBtn {
+    background: #3b82f6;
+}
+#loginBtn:hover {
     background: #2563eb;
 }
-
-button:active {
-    transform: scale(0.99);
+#guestBtn {
+    background: #64748b;
 }
-
-/* エラーメッセージ */
+#guestBtn:hover {
+    background: #475569;
+}
 .error {
-    min-height: 20px;
-
-    margin: 12px 0 0;
-
-    color: #ef4444;
-
+    color: #f87171;
+    margin-top: 15px;
+    text-align: center;
     font-size: 0.9rem;
 }
-
-/* スマートフォン対応 */
-@media (max-width: 600px) {
-
-    body {
-        padding: 15px;
-
-        background-attachment: scroll;
-    }
-
-    .container {
-        width: 100%;
-
-        padding: 30px 20px;
-
-        border-radius: 12px;
-    }
-
-    h1 {
-        font-size: 1.5rem;
-    }
-
-    .description {
-        font-size: 0.9rem;
-
-        margin-bottom: 25px;
-    }
+.info {
+    margin-top: 25px;
+    padding: 15px;
+    background: rgba(30, 41, 59, 0.6);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #94a3b8;
 }
 </style>
 </head>
-
 <body>
-
-<!-- パスワード入力画面 -->
 <div class="container">
-
     <h1>🎥 画面録画ツール</h1>
 
-    <p class="description">
-        使用するにはパスワードを入力してください。
-    </p>
-
-    <div class="login-area">
-
-        <input
-            type="password"
-            id="password"
-            placeholder="パスワードを入力"
-            autocomplete="off"
-        >
-
-        <button id="login">
-            入室する
-        </button>
-
-        <p id="error" class="error"></p>
-
+    <div class="form-group">
+        <label for="username">ユーザー名</label>
+        <input type="text" id="username" placeholder="ユーザー名を入力" />
     </div>
 
+    <div class="form-group">
+        <label for="password">パスワード</label>
+        <input type="password" id="password" placeholder="パスワードを入力" />
+    </div>
+
+    <button id="loginBtn">ログイン</button>
+    <button id="guestBtn">ゲストとして使用（ログインなし）</button>
+
+    <div id="error" class="error"></div>
+
+    <div class="info">
+        <strong>ゲストモード</strong>：毎回クラウド設定を手入力<br>
+        <strong>ログイン</strong>：設定を端末に保存（次回から自動入力）
+    </div>
 </div>
 
 <script>
+const loginBtn = document.getElementById("loginBtn");
+const guestBtn = document.getElementById("guestBtn");
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+const errorDiv = document.getElementById("error");
 
-/* =========================
-   パスワード設定
-   ========================= */
+loginBtn.addEventListener("click", () => {
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
 
-const CORRECT_PASSWORD = "testpass";
-
-
-/* =========================
-   HTML要素を取得
-   ========================= */
-
-const passwordInput =
-    document.getElementById("password");
-
-const loginButton =
-    document.getElementById("login");
-
-const errorMessage =
-    document.getElementById("error");
-
-
-/* =========================
-   ログイン処理
-   ========================= */
-
-function loginCheck() {
-
-    const enteredPassword =
-        passwordInput.value;
-
-
-    /* パスワードが正しい場合 */
-
-    if (enteredPassword === CORRECT_PASSWORD) {
-
-        /*
-         * 認証済みであることを記録
-         */
-        sessionStorage.setItem(
-            "recording_authenticated",
-            "true"
-        );
-
-
-        /*
-         * 録画ページへ移動
-         */
-        window.location.href =
-            "recorder.html";
-
-
+    if (!username || !password) {
+        errorDiv.textContent = "ユーザー名とパスワードを入力してください";
         return;
     }
 
+    // 簡易認証（実際はサーバー認証が望ましい）
+    const userData = {
+        username: username,
+        password: password,
+        loggedIn: true
+    };
 
-    /* =========================
-       パスワードが間違っている場合
-       ========================= */
+    localStorage.setItem("user_data", JSON.stringify(userData));
+    sessionStorage.setItem("recording_authenticated", "true");
 
-    errorMessage.textContent =
-        "パスワードが間違っています。";
+    window.location.href = "recorder.html";
+});
 
-    passwordInput.value = "";
+guestBtn.addEventListener("click", () => {
+    localStorage.removeItem("user_data");
+    sessionStorage.setItem("recording_authenticated", "true");
+    window.location.href = "recorder.html";
+});
 
-    passwordInput.focus();
-}
-
-
-/* =========================
-   ボタンをクリック
-   ========================= */
-
-loginButton.addEventListener(
-    "click",
-    loginCheck
-);
-
-
-/* =========================
-   Enterキーでもログイン
-   ========================= */
-
-passwordInput.addEventListener(
-    "keydown",
-    (event) => {
-
-        if (event.key === "Enter") {
-            loginCheck();
-        }
-
+// すでにログイン済みの場合はスキップ
+if (sessionStorage.getItem("recording_authenticated") === "true") {
+    const userData = JSON.parse(localStorage.getItem("user_data") || "null");
+    if (userData && userData.loggedIn) {
+        window.location.href = "recorder.html";
     }
-);
-
+}
 </script>
-
 </body>
 </html>
