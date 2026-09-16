@@ -3,9 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>画面録画 - 録画中</title>
+<title>画面録画ツール - 操作画面</title>
+
 <style>
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
@@ -14,6 +18,7 @@ body {
     color: white;
     background: url("IMG_0312.jpeg") center / cover no-repeat;
 }
+
 .container {
     width: 94%;
     max-width: 1100px;
@@ -24,6 +29,7 @@ body {
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
+
 header {
     display: flex;
     justify-content: space-between;
@@ -31,7 +37,12 @@ header {
     gap: 20px;
     margin-bottom: 25px;
 }
-h1 { margin: 0; font-size: 1.6rem; }
+
+h1 {
+    margin: 0;
+    font-size: 1.6rem;
+}
+
 button {
     width: 100%;
     padding: 13px;
@@ -43,19 +54,28 @@ button {
     border-radius: 7px;
     cursor: pointer;
 }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button:hover {
+    opacity: 0.92;
+}
+
 #logout {
     width: auto;
     margin: 0;
     padding: 10px 18px;
     background: #64748b;
 }
-#logout:hover { background: #475569; }
+
+#logout:hover {
+    background: #475569;
+}
+
 .layout {
     display: grid;
     grid-template-columns: 1fr 320px;
     gap: 20px;
 }
+
 .preview-area {
     min-height: 450px;
     display: flex;
@@ -65,22 +85,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     background: rgba(0, 0, 0, 0.4);
     border-radius: 10px;
 }
-video {
+
+.preview-image {
     width: 100%;
-    max-height: 650px;
-    background: black;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
-.no-preview {
-    padding: 20px;
-    color: #94a3b8;
-    text-align: center;
-}
+
 .controls {
     padding: 20px;
     background: rgba(30, 41, 59, 0.85);
     border-radius: 10px;
 }
-.controls h2 { margin-top: 0; }
+
+.controls h2 {
+    margin-top: 0;
+}
+
 .status {
     padding: 12px;
     margin-bottom: 15px;
@@ -88,56 +110,167 @@ video {
     background: rgba(15, 23, 42, 0.8);
     border-radius: 7px;
 }
-.recording { color: #f87171; font-weight: bold; }
-#start { background: #3b82f6; }
-#start:hover:not(:disabled) { background: #2563eb; }
-#stop { background: #ef4444; }
-#stop:hover:not(:disabled) { background: #dc2626; }
-#back { background: #64748b; }
-#back:hover { background: #475569; }
+
+.group {
+    margin-top: 14px;
+}
+
+.group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #cbd5e1;
+    font-size: 0.92rem;
+}
+
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #334155;
+    border-radius: 7px;
+    background: #0f172a;
+    color: white;
+    outline: none;
+}
+
+#to-record {
+    background: #3b82f6;
+}
+
+#to-record:hover {
+    background: #2563eb;
+}
+
 .info {
     margin-top: 20px;
     color: #94a3b8;
     font-size: 0.85rem;
     line-height: 1.6;
 }
+
+.device-box {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.device-box h3 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+}
+
+.device-list {
+    margin: 0;
+    padding-left: 18px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.small-note {
+    margin-top: 8px;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
 @media (max-width: 800px) {
-    body { padding: 15px; }
-    .container { width: 100%; padding: 20px; }
-    header { flex-direction: column; align-items: stretch; }
-    #logout { width: 100%; }
-    .layout { grid-template-columns: 1fr; }
-    .preview-area { min-height: 300px; }
+    body {
+        padding: 15px;
+    }
+
+    .container {
+        width: 100%;
+        padding: 20px;
+    }
+
+    header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #logout {
+        width: 100%;
+    }
+
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .preview-area {
+        min-height: 240px;
+    }
 }
 </style>
 </head>
+
 <body>
 <div class="container">
     <header>
-        <h1>🎥 録画中</h1>
+        <h1>🎥 画面録画コントロールパネル</h1>
         <button id="logout">ログアウト</button>
     </header>
 
     <div class="layout">
         <section class="preview-area">
-            <div id="no-preview" class="no-preview">
-                ここに録画した映像が表示されます。
-            </div>
-            <video id="preview" class="hidden" controls></video>
+            <img class="preview-image" src="IMG_0312.jpeg" alt="操作画面イメージ" />
         </section>
 
         <section class="controls">
-            <h2>録画操作</h2>
+            <h2>操作項目</h2>
 
-            <div id="status" class="status">待機中</div>
+            <div id="status" class="status">
+                操作画面です。下の項目を選んで録画ページへ進みます。
+            </div>
 
-            <button id="start">🎥 録画を開始</button>
-            <button id="stop" disabled>⏹ 録画を停止</button>
-            <button id="back">🔙 操作画面へ戻る</button>
+            <div class="group">
+                <label for="storageType">接続されているストレージ</label>
+                <select id="storageType">
+                    <option value="internal">内部ストレージ</option>
+                </select>
+            </div>
+
+            <div id="deviceBox" class="device-box">
+                <h3>接続中の外部ストレージ</h3>
+                <ul id="deviceList" class="device-list">
+                    <li>検知中...</li>
+                </ul>
+                <div class="small-note">
+                    ブラウザから取得できる接続機器を一覧表示します。USBやシリアル対応機器が対象です。
+                </div>
+            </div>
+
+            <div class="group">
+                <label for="fpsType">録画開始項目 / FPS</label>
+                <select id="fpsType">
+                    <option value="30">30FPS</option>
+                    <option value="60">60FPS</option>
+                </select>
+            </div>
+
+            <div class="group">
+                <label for="resolutionType">解像度</label>
+                <select id="resolutionType">
+                    <option value="256x144">144p：256 × 144px</option>
+                    <option value="427x240">240p：427 × 240px（低画質・モバイル向け）</option>
+                    <option value="640x360">360p：640 × 360px（低画質）</option>
+                    <option value="720x480">480p（SD）：720 × 480px（DVD相当）</option>
+                    <option value="1280x720">720p（HD）：1280 × 720px（ハイビジョン）</option>
+                    <option value="1920x1080">1080p（フルHD / 2K）：1920 × 1080px（現在の標準・YouTube等）</option>
+                    <option value="2560x1440">1440p（WQHD / 2K）：2560 × 1440px（高解像度・ゲーム実況等）</option>
+                </select>
+            </div>
+
+            <button id="to-record">この設定で録画を開始する</button>
 
             <p class="info">
-                「録画を開始」を押すと、録画する画面を選択できます。<br><br>
-                録画データは WebM 形式でサーバーへ送信されます。
+                この画面は操作用です。<br><br>
+                接続中の外部ストレージは、端末とブラウザが取得できる範囲で自動検知して表示します。<br>
+                保存前に容量が足りない場合は、
+                「お使いのストレージは保存できるほどの容量を満たしておりません」
+                を表示する構成にします。
             </p>
         </section>
     </div>
@@ -148,127 +281,85 @@ if (sessionStorage.getItem("recording_authenticated") !== "true") {
     window.location.href = "index.html";
 }
 
-const start = document.getElementById("start");
-const stop = document.getElementById("stop");
-const back = document.getElementById("back");
 const logout = document.getElementById("logout");
 const status = document.getElementById("status");
-const preview = document.getElementById("preview");
-const noPreview = document.getElementById("no-preview");
+const toRecord = document.getElementById("to-record");
+const storageType = document.getElementById("storageType");
+const fpsType = document.getElementById("fpsType");
+const resolutionType = document.getElementById("resolutionType");
+const deviceList = document.getElementById("deviceList");
 
-let stream = null;
-let recorder = null;
-let chunks = [];
-let recordedBlob = null;
+function addOptionIfMissing(select, value, label) {
+    const exists = [...select.options].some((opt) => opt.value === value);
+    if (!exists) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = label;
+        select.appendChild(opt);
+    }
+}
 
-const fps = sessionStorage.getItem("selected_fps") || "30";
-const resolution = sessionStorage.getItem("selected_resolution") || "1280x720";
-const [width, height] = resolution.split("x").map(Number);
+function renderDevices(items) {
+    deviceList.innerHTML = "";
 
-async function startRecording() {
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "接続中の外部ストレージは検出できません。";
+        deviceList.appendChild(li);
+        return;
+    }
+
+    items.forEach((name) => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        deviceList.appendChild(li);
+    });
+}
+
+async function detectConnectedDevices() {
+    const found = [];
+
     try {
-        chunks = [];
-        recordedBlob = null;
-
-        stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { cursor: "motion", frameRate: Number(fps) },
-            audio: true
-        });
-
-        const videoTrack = stream.getVideoTracks()[0];
-        try {
-            await videoTrack.applyConstraints({
-                frameRate: { ideal: Number(fps), max: Number(fps) },
-                width: { ideal: width },
-                height: { ideal: height }
+        if (navigator.usb && navigator.usb.getDevices) {
+            const usbDevices = await navigator.usb.getDevices();
+            usbDevices.forEach((device) => {
+                const vendor = device.manufacturerName || "USB機器";
+                const product = device.productName || "不明な機器";
+                found.push(`USB: ${vendor} / ${product}`);
             });
-        } catch (e) {}
-
-        let mimeType = "video/webm;codecs=vp9,opus";
-        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "video/webm";
-
-        recorder = new MediaRecorder(stream, { mimeType });
-
-        recorder.ondataavailable = async (event) => {
-            if (event.data && event.data.size > 0) {
-                chunks.push(event.data);
-                await uploadChunk(event.data);
-            }
-        };
-
-        recorder.onstop = () => {
-            recordedBlob = new Blob(chunks, { type: "video/webm" });
-            preview.src = URL.createObjectURL(recordedBlob);
-            preview.classList.remove("hidden");
-            noPreview.classList.add("hidden");
-            status.textContent = "録画完了";
-            status.classList.remove("recording");
-        };
-
-        const videoTrackEnd = stream.getVideoTracks()[0];
-        videoTrackEnd.addEventListener("ended", () => {
-            if (recorder && recorder.state === "recording") {
-                stopRecording();
-            }
-        });
-
-        recorder.start(1000);
-
-        start.disabled = true;
-        stop.disabled = false;
-        status.textContent = "🔴 録画中";
-        status.classList.add("recording");
-    } catch (error) {
-        console.error(error);
-        status.textContent = "録画を開始できませんでした。";
-    }
-}
-
-function stopRecording() {
-    if (recorder && recorder.state === "recording") {
-        recorder.stop();
-    }
-    if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        stream = null;
-    }
-    start.disabled = false;
-    stop.disabled = true;
-}
-
-async function uploadChunk(blob) {
-    try {
-        const response = await fetch("/upload", {
-            method: "POST",
-            body: blob
-        });
-        if (!response.ok) {
-            console.warn("Upload failed for chunk");
         }
-    } catch (e) {
-        console.error("Upload error:", e);
-    }
+    } catch (e) {}
+
+    try {
+        if (navigator.serial && navigator.serial.getPorts) {
+            const ports = await navigator.serial.getPorts();
+            ports.forEach((port, index) => {
+                const info = port.getInfo ? port.getInfo() : {};
+                const name = info.usbProductId || info.usbVendorId
+                    ? `Serial: 接続済みポート ${index + 1}`
+                    : `Serial: 接続済みポート ${index + 1}`;
+                found.push(name);
+            });
+        }
+    } catch (e) {}
+
+    const unique = [...new Set(found)];
+    renderDevices(unique);
 }
 
-function goBack() {
-    if (recorder && recorder.state === "recording") {
-        stopRecording();
-    }
-    window.location.href = "recorder.html";
-}
+toRecord.addEventListener("click", () => {
+    sessionStorage.setItem("selected_storage", storageType.value);
+    sessionStorage.setItem("selected_fps", fpsType.value);
+    sessionStorage.setItem("selected_resolution", resolutionType.value);
+    window.location.href = "record.html";
+});
 
-function doLogout() {
-    if (recorder && recorder.state === "recording") {
-        stopRecording();
-    }
+logout.addEventListener("click", () => {
     sessionStorage.removeItem("recording_authenticated");
     window.location.href = "index.html";
-}
+});
 
-start.addEventListener("click", startRecording);
-stop.addEventListener("click", stopRecording);
-back.addEventListener("click", goBack);
-logout.addEventListener("click", doLogout);
+detectConnectedDevices();
 </script>
 </body>
 </html>
