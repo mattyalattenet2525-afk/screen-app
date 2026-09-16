@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>画面録画ツール - 操作画面</title>
-
+<title>画面録画ツール - 設定</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -45,12 +44,7 @@ button {
     cursor: pointer;
 }
 button:hover { opacity: 0.92; }
-#logout {
-    width: auto;
-    margin: 0;
-    padding: 10px 18px;
-    background: #64748b;
-}
+#logout { width: auto; margin: 0; padding: 10px 18px; background: #64748b; }
 #logout:hover { background: #475569; }
 .layout {
     display: grid;
@@ -136,13 +130,6 @@ select, input {
     font-size: 0.8rem;
     line-height: 1.5;
 }
-.user-info {
-    margin-bottom: 15px;
-    padding: 10px;
-    background: rgba(30, 41, 59, 0.7);
-    border-radius: 8px;
-    font-size: 0.9rem;
-}
 @media (max-width: 800px) {
     body { padding: 15px; }
     .container { width: 100%; padding: 20px; }
@@ -153,28 +140,20 @@ select, input {
 }
 </style>
 </head>
-
 <body>
 <div class="container">
     <header>
         <h1>🎥 画面録画コントロールパネル</h1>
         <button id="logout">ログアウト</button>
     </header>
-
     <div class="layout">
         <section class="preview-area">
             <img class="preview-image" src="IMG_0312.jpeg" alt="操作画面イメージ" />
         </section>
-
         <section class="controls">
             <h2>操作項目</h2>
-
-            <div id="status" class="status">操作画面です</div>
-
-            <div class="user-info" id="userInfo">
-                ゲストモード
-            </div>
-
+            <div id="status" class="status">設定を入力してください</div>
+            
             <div class="group">
                 <label for="cloudService">クラウドサービス</label>
                 <select id="cloudService">
@@ -184,14 +163,22 @@ select, input {
                     <option value="local">ローカル保存</option>
                 </select>
             </div>
-
-            <div class="group" id="megaCredentials">
-                <label for="megaEmail">MEGA メール</label>
-                <input type="email" id="megaEmail" placeholder="mega@example.com" />
-                <label for="megaPassword" style="margin-top: 10px;">MEGA パスワード</label>
-                <input type="password" id="megaPassword" placeholder="パスワード" />
+            
+            <div class="group">
+                <label for="cloudAccount">アカウント名（メール）</label>
+                <input type="text" id="cloudAccount" placeholder="email@example.com" />
             </div>
-
+            
+            <div class="group">
+                <label for="cloudPassword">パスワード</label>
+                <input type="password" id="cloudPassword" placeholder="パスワード" />
+            </div>
+            
+            <div class="group">
+                <label for="cloudToken">トークン（任意）</label>
+                <input type="text" id="cloudToken" placeholder="OAuth トークンなど" />
+            </div>
+            
             <div class="group">
                 <label for="storageType">保存先</label>
                 <select id="storageType">
@@ -199,19 +186,19 @@ select, input {
                     <option value="external">外部ストレージ（USB、SD カード、SSD）</option>
                 </select>
             </div>
-
+            
             <button id="select-storage">📁 外部ストレージを選択</button>
-
+            
             <div id="deviceBox" class="device-box">
                 <h3>接続中の外部ストレージ</h3>
                 <ul id="deviceList" class="device-list">
                     <li>「外部ストレージを選択」ボタンを押して選択してください</li>
                 </ul>
                 <div class="small-note">
-                    File System Access API 対応ブラウザ（Android Chrome など）で外部ストレージを選択できます。
+                    File System Access API 対応ブラウザで外部ストレージを選択できます。
                 </div>
             </div>
-
+            
             <div class="group">
                 <label for="fpsType">FPS</label>
                 <select id="fpsType">
@@ -219,7 +206,7 @@ select, input {
                     <option value="60">60FPS</option>
                 </select>
             </div>
-
+            
             <div class="group">
                 <label for="resolutionType">解像度</label>
                 <select id="resolutionType">
@@ -232,17 +219,16 @@ select, input {
                     <option value="2560x1440">1440p（WQHD）：2560 × 1440px</option>
                 </select>
             </div>
-
+            
             <button id="to-record">この設定で録画を開始する</button>
-
+            
             <p class="info">
-                クラウド設定は毎回入力します（ログイン時は保存）。<br>
+                クラウド認証情報は毎回入力します（ログイン時は保存）。<br>
                 外部ストレージは File System Access API で選択します。
             </p>
         </section>
     </div>
 </div>
-
 <script>
 if (sessionStorage.getItem("recording_authenticated") !== "true") {
     window.location.href = "index.html";
@@ -250,26 +236,16 @@ if (sessionStorage.getItem("recording_authenticated") !== "true") {
 
 const logout = document.getElementById("logout");
 const status = document.getElementById("status");
-const userInfo = document.getElementById("userInfo");
 const toRecord = document.getElementById("to-record");
 const storageType = document.getElementById("storageType");
 const fpsType = document.getElementById("fpsType");
 const resolutionType = document.getElementById("resolutionType");
 const cloudService = document.getElementById("cloudService");
-const megaEmail = document.getElementById("megaEmail");
-const megaPassword = document.getElementById("megaPassword");
+const cloudAccount = document.getElementById("cloudAccount");
+const cloudPassword = document.getElementById("cloudPassword");
+const cloudToken = document.getElementById("cloudToken");
 const selectStorageBtn = document.getElementById("select-storage");
 const deviceList = document.getElementById("deviceList");
-
-const userData = JSON.parse(localStorage.getItem("user_data") || "null");
-
-if (userData && userData.loggedIn) {
-    userInfo.textContent = `ログイン中：${userData.username}`;
-    megaEmail.value = localStorage.getItem("mega_email") || "";
-    megaPassword.value = localStorage.getItem("mega_password") || "";
-} else {
-    userInfo.textContent = "ゲストモード";
-}
 
 let selectedDirectoryHandle = null;
 
@@ -312,13 +288,9 @@ toRecord.addEventListener("click", () => {
     sessionStorage.setItem("selected_fps", fpsType.value);
     sessionStorage.setItem("selected_resolution", resolutionType.value);
     sessionStorage.setItem("selected_cloud", cloudService.value);
-    sessionStorage.setItem("selected_mega_email", megaEmail.value);
-    sessionStorage.setItem("selected_mega_password", megaPassword.value);
-    
-    if (userData && userData.loggedIn) {
-        localStorage.setItem("mega_email", megaEmail.value);
-        localStorage.setItem("mega_password", megaPassword.value);
-    }
+    sessionStorage.setItem("cloud_account", cloudAccount.value);
+    sessionStorage.setItem("cloud_password", cloudPassword.value);
+    sessionStorage.setItem("cloud_token", cloudToken.value);
     
     if (storageType.value === "external" && selectedDirectoryHandle) {
         sessionStorage.setItem("external_storage_selected", "true");
@@ -328,11 +300,6 @@ toRecord.addEventListener("click", () => {
 });
 
 logout.addEventListener("click", () => {
-    if (userData && userData.loggedIn) {
-        localStorage.removeItem("user_data");
-        localStorage.removeItem("mega_email");
-        localStorage.removeItem("mega_password");
-    }
     sessionStorage.removeItem("recording_authenticated");
     window.location.href = "index.html";
 });
