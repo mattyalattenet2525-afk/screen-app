@@ -101,6 +101,8 @@ video {
 #start:hover:not(:disabled) { background: #2563eb; }
 #stop { background: #ef4444; }
 #stop:hover:not(:disabled) { background: #dc2626; }
+#merge { background: #8b5cf6; }
+#merge:hover:not(:disabled) { background: #7c3aed; }
 #back { background: #64748b; }
 #back:hover { background: #475569; }
 .info {
@@ -145,6 +147,7 @@ video {
 
             <button id="start">🎥 録画を開始</button>
             <button id="stop" disabled>⏹ 録画を停止</button>
+            <button id="merge" disabled>📎 録画データを結合</button>
             <button id="back">🔙 操作画面へ戻る</button>
 
             <p class="info">
@@ -162,6 +165,7 @@ if (sessionStorage.getItem("recording_authenticated") !== "true") {
 
 const start = document.getElementById("start");
 const stop = document.getElementById("stop");
+const merge = document.getElementById("merge");
 const back = document.getElementById("back");
 const logout = document.getElementById("logout");
 const status = document.getElementById("status");
@@ -176,8 +180,8 @@ const storage = sessionStorage.getItem("selected_storage") || "internal";
 settingsDisplay.innerHTML = `
     <strong>現在の設定</strong><br>
     FPS: ${fps}FPS<br>
-    解像度: ${resolution}<br>
-    保存先: ${storage === "internal" ? "内部ストレージ" : "外部ストレージ"}
+    解像度：${resolution}<br>
+    保存先：${storage === "internal" ? "内部ストレージ" : "外部ストレージ"}
 `;
 
 let stream = null;
@@ -186,8 +190,18 @@ let chunks = [];
 let recordedBlob = null;
 let chunkIndex = 0;
 const CHUNK_INTERVAL_MS = 90000; // 1 分 30 秒
+let sessionId = null;
 
 const [width, height] = resolution.split("x").map(Number);
+
+function generateSessionId() {
+    return (
+        "session-" +
+        Date.now() +
+        "-" +
+        Math.random().toString(36).substring(2, 8)
+    );
+}
 
 async function checkStorageSpace(requiredBytes) {
     if (!navigator.storage || !navigator.storage.estimate) return true;
@@ -201,6 +215,7 @@ async function startRecording() {
         chunks = [];
         recordedBlob = null;
         chunkIndex = 0;
+        sessionId = generateSessionId();
 
         stream = await navigator.mediaDevices.getDisplayMedia({
             video: { cursor: "motion", frameRate: Number(fps) },
@@ -241,8 +256,9 @@ async function startRecording() {
             preview.src = URL.createObjectURL(recordedBlob);
             preview.classList.remove("hidden");
             noPreview.classList.add("hidden");
-            status.textContent = "録画完了";
+            status.textContent = "録画完了。結合ボタンを押してください。";
             status.classList.remove("recording");
+            merge.disabled = false;
         };
 
         const videoTrackEnd = stream.getVideoTracks()[0];
@@ -256,6 +272,7 @@ async function startRecording() {
 
         start.disabled = true;
         stop.disabled = false;
+        merge.disabled = true;
         status.textContent = "🔴 録画中";
         status.classList.add("recording");
     } catch (error) {
@@ -296,8 +313,38 @@ async function uploadChunk(blob, index) {
         if (!response.ok) {
             console.warn("Upload failed for chunk");
         }
+        
+        const result = await response.json().catch(() => ({}));
+        if (result.cloudUsagePercent && result.cloudUsagePercent >= 50) {
+            status.textContent = "⚠️ クラウド使用率が 50% を超えました";
+        }
     } catch (e) {
         console.error("Upload error:", e);
+    }
+}
+
+async function mergeRecording() {
+    if (!sessionId) return;
+    
+    merge.disabled = true;
+    status.textContent = "結合中...";
+    
+    try {
+        const response = await fetch("/merge", {
+            method: "POST",
+            headers: {
+                "X-Session-Id": sessionId
+            }
+        });
+        
+        const result = await response.json();
+        if (result.ok) {
+            status.textContent = `結合完了：${result.filename} (${result.size} bytes)`;
+        } else {
+            status.textContent = "結合に失敗しました";
+        }
+    } catch (e) {
+        status.textContent = "エラー：" + e.message;
     }
 }
 
@@ -318,6 +365,7 @@ function doLogout() {
 
 start.addEventListener("click", startRecording);
 stop.addEventListener("click", stopRecording);
+merge.addEventListener("click", mergeRecording);
 back.addEventListener("click", goBack);
 logout.addEventListener("click", doLogout);
 </script>
