@@ -1,7 +1,7 @@
 {
   "name": "screen-recorder",
   "version": "1.0.0",
-  "description": "画面録画ツール with MEGA cloud storage",
+  "description": "画面録画ツール",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
