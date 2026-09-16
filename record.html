@@ -89,6 +89,14 @@ video {
     border-radius: 7px;
 }
 .recording { color: #f87171; font-weight: bold; }
+.settings-display {
+    margin-bottom: 15px;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
 #start { background: #3b82f6; }
 #start:hover:not(:disabled) { background: #2563eb; }
 #stop { background: #ef4444; }
@@ -131,13 +139,17 @@ video {
 
             <div id="status" class="status">待機中</div>
 
+            <div class="settings-display" id="settingsDisplay">
+                設定読込中...
+            </div>
+
             <button id="start">🎥 録画を開始</button>
             <button id="stop" disabled>⏹ 録画を停止</button>
             <button id="back">🔙 操作画面へ戻る</button>
 
             <p class="info">
                 「録画を開始」を押すと、録画する画面を選択できます。<br><br>
-                録画データは WebM 形式でサーバーへ送信されます。
+                録画データは 1 分 30 秒ごとに分割され、クラウドへ送信されます。
             </p>
         </section>
     </div>
@@ -155,20 +167,40 @@ const logout = document.getElementById("logout");
 const status = document.getElementById("status");
 const preview = document.getElementById("preview");
 const noPreview = document.getElementById("no-preview");
+const settingsDisplay = document.getElementById("settingsDisplay");
+
+const fps = sessionStorage.getItem("selected_fps") || "30";
+const resolution = sessionStorage.getItem("selected_resolution") || "1280x720";
+const storage = sessionStorage.getItem("selected_storage") || "internal";
+
+settingsDisplay.innerHTML = `
+    <strong>現在の設定</strong><br>
+    FPS: ${fps}FPS<br>
+    解像度: ${resolution}<br>
+    保存先: ${storage === "internal" ? "内部ストレージ" : "外部ストレージ"}
+`;
 
 let stream = null;
 let recorder = null;
 let chunks = [];
 let recordedBlob = null;
+let chunkIndex = 0;
+const CHUNK_INTERVAL_MS = 90000; // 1 分 30 秒
 
-const fps = sessionStorage.getItem("selected_fps") || "30";
-const resolution = sessionStorage.getItem("selected_resolution") || "1280x720";
 const [width, height] = resolution.split("x").map(Number);
+
+async function checkStorageSpace(requiredBytes) {
+    if (!navigator.storage || !navigator.storage.estimate) return true;
+    const estimate = await navigator.storage.estimate();
+    const available = Math.max(0, (estimate.quota || 0) - (estimate.usage || 0));
+    return available >= requiredBytes;
+}
 
 async function startRecording() {
     try {
         chunks = [];
         recordedBlob = null;
+        chunkIndex = 0;
 
         stream = await navigator.mediaDevices.getDisplayMedia({
             video: { cursor: "motion", frameRate: Number(fps) },
@@ -192,7 +224,15 @@ async function startRecording() {
         recorder.ondataavailable = async (event) => {
             if (event.data && event.data.size > 0) {
                 chunks.push(event.data);
-                await uploadChunk(event.data);
+                
+                const canSave = await checkStorageSpace(event.data.size);
+                if (!canSave) {
+                    status.textContent = "⚠️ 保存先の容量が不足しています";
+                    stopRecording();
+                    return;
+                }
+                
+                await uploadChunk(event.data, chunkIndex++);
             }
         };
 
@@ -212,7 +252,7 @@ async function startRecording() {
             }
         });
 
-        recorder.start(1000);
+        recorder.start(CHUNK_INTERVAL_MS);
 
         start.disabled = true;
         stop.disabled = false;
@@ -236,12 +276,23 @@ function stopRecording() {
     stop.disabled = true;
 }
 
-async function uploadChunk(blob) {
+async function uploadChunk(blob, index) {
     try {
-        const response = await fetch("/upload", {
+        const response = await fetch("/upload-chunk", {
             method: "POST",
-            body: blob
+            body: blob,
+            headers: {
+                "X-Session-Id": sessionId,
+                "X-Chunk-Index": index.toString()
+            }
         });
+        
+        if (response.status === 413) {
+            status.textContent = "⚠️ クラウドストレージの容量制限に達しました";
+            stopRecording();
+            return;
+        }
+        
         if (!response.ok) {
             console.warn("Upload failed for chunk");
         }
