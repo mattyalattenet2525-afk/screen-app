@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>画面録画ツール - ログイン</title>
+<title>画面録画ツール</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -12,9 +12,9 @@ body {
     display: grid;
     place-items: center;
     font-family: Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: white;
     padding: 20px;
+    background: url("IMG_0312.jpeg") center / cover no-repeat;
 }
 .container {
     width: 100%;
@@ -23,35 +23,18 @@ body {
     padding: 40px 30px;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    text-align: center;
 }
 h1 {
-    margin: 0 0 30px;
-    text-align: center;
+    margin: 0 0 20px;
     font-size: 1.8rem;
 }
-.form-group {
-    margin-bottom: 20px;
+p {
+    color: #94a3b8;
+    line-height: 1.6;
+    margin-bottom: 30px;
 }
-label {
-    display: block;
-    margin-bottom: 8px;
-    color: #cbd5e1;
-    font-size: 0.95rem;
-}
-input {
-    width: 100%;
-    padding: 14px;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    background: #0f172a;
-    color: white;
-    font-size: 1rem;
-    outline: none;
-}
-input:focus {
-    border-color: #3b82f6;
-}
-button {
+#startBtn {
     width: 100%;
     padding: 14px;
     border: none;
@@ -60,25 +43,10 @@ button {
     font-weight: bold;
     color: white;
     cursor: pointer;
-    margin-top: 10px;
-}
-#loginBtn {
     background: #3b82f6;
 }
-#loginBtn:hover {
+#startBtn:hover {
     background: #2563eb;
-}
-#guestBtn {
-    background: #64748b;
-}
-#guestBtn:hover {
-    background: #475569;
-}
-.error {
-    color: #f87171;
-    margin-top: 15px;
-    text-align: center;
-    font-size: 0.9rem;
 }
 .info {
     margin-top: 25px;
@@ -88,76 +56,30 @@ button {
     font-size: 0.85rem;
     line-height: 1.6;
     color: #94a3b8;
+    text-align: left;
 }
 </style>
 </head>
 <body>
 <div class="container">
     <h1>🎥 画面録画ツール</h1>
-
-    <div class="form-group">
-        <label for="username">ユーザー名</label>
-        <input type="text" id="username" placeholder="ユーザー名を入力" />
-    </div>
-
-    <div class="form-group">
-        <label for="password">パスワード</label>
-        <input type="password" id="password" placeholder="パスワードを入力" />
-    </div>
-
-    <button id="loginBtn">ログイン</button>
-    <button id="guestBtn">ゲストとして使用（ログインなし）</button>
-
-    <div id="error" class="error"></div>
-
+    <p>あなたのクラウドストレージを使って画面を録画・保存します</p>
+    
+    <button id="startBtn">開始する</button>
+    
     <div class="info">
-        <strong>ゲストモード</strong>：毎回クラウド設定を手入力<br>
-        <strong>ログイン</strong>：設定を端末に保存（次回から自動入力）
+        <strong>使い方</strong>：<br>
+        1. クラウドサービスを選択（自動検出）<br>
+        2. 録画設定（FPS、解像度）<br>
+        3. 録画開始 → 自動でクラウドへ保存
     </div>
 </div>
 
 <script>
-const loginBtn = document.getElementById("loginBtn");
-const guestBtn = document.getElementById("guestBtn");
-const usernameInput = document.getElementById("username");
-const passwordInput = document.getElementById("password");
-const errorDiv = document.getElementById("error");
-
-loginBtn.addEventListener("click", () => {
-    const username = usernameInput.value.trim();
-    const password = passwordInput.value.trim();
-
-    if (!username || !password) {
-        errorDiv.textContent = "ユーザー名とパスワードを入力してください";
-        return;
-    }
-
-    // 簡易認証（実際はサーバー認証が望ましい）
-    const userData = {
-        username: username,
-        password: password,
-        loggedIn: true
-    };
-
-    localStorage.setItem("user_data", JSON.stringify(userData));
-    sessionStorage.setItem("recording_authenticated", "true");
-
-    window.location.href = "recorder.html";
-});
-
-guestBtn.addEventListener("click", () => {
-    localStorage.removeItem("user_data");
+document.getElementById("startBtn").addEventListener("click", () => {
     sessionStorage.setItem("recording_authenticated", "true");
     window.location.href = "recorder.html";
 });
-
-// すでにログイン済みの場合はスキップ
-if (sessionStorage.getItem("recording_authenticated") === "true") {
-    const userData = JSON.parse(localStorage.getItem("user_data") || "null");
-    if (userData && userData.loggedIn) {
-        window.location.href = "recorder.html";
-    }
-}
 </script>
 </body>
 </html>
