@@ -1,69 +1,113 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>画面録画ツール</title>
+
 <style>
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
     display: grid;
     place-items: center;
+    padding: 20px;
     font-family: Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
     color: white;
-    padding: 20px;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%), url("IMG_0312.jpeg") center / cover;
+    background:
+        linear-gradient(
+            rgba(15, 23, 42, 0.45),
+            rgba(15, 23, 42, 0.45)
+        ),
+        url("IMG_0312.jpeg") center / cover no-repeat;
 }
+
 .container {
     width: 100%;
     max-width: 420px;
-    background: rgba(15, 23, 42, 0.95);
     padding: 40px 30px;
+    text-align: center;
+    background: rgba(15, 23, 42, 0.95);
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    text-align: center;
 }
-h1 { margin: 0 0 20px; font-size: 1.8rem; }
-p { color: #94a3b8; line-height: 1.6; margin-bottom: 30px; }
+
+h1 {
+    margin: 0 0 20px;
+    font-size: 1.8rem;
+}
+
+p {
+    margin-bottom: 30px;
+    color: #cbd5e1;
+    line-height: 1.7;
+}
+
 #startBtn {
     width: 100%;
     padding: 14px;
-    border: none;
-    border-radius: 8px;
+    color: white;
     font-size: 1rem;
     font-weight: bold;
-    color: white;
     cursor: pointer;
     background: #3b82f6;
+    border: none;
+    border-radius: 8px;
 }
-#startBtn:hover { background: #2563eb; }
+
+#startBtn:hover {
+    background: #2563eb;
+}
+
 .info {
     margin-top: 25px;
     padding: 15px;
-    background: rgba(30, 41, 59, 0.6);
-    border-radius: 8px;
+    color: #cbd5e1;
     font-size: 0.85rem;
-    line-height: 1.6;
-    color: #94a3b8;
+    line-height: 1.7;
     text-align: left;
+    background: rgba(30, 41, 59, 0.7);
+    border-radius: 8px;
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 30px 20px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
 }
 </style>
 </head>
+
 <body>
 <div class="container">
     <h1>🎥 画面録画ツール</h1>
-    <p>あなたのクラウドストレージを使って画面を録画・保存します</p>
-    <button id="startBtn">開始する</button>
+
+    <p>
+        あなたのクラウドストレージを使って、<br>
+        画面を録画・保存します。
+    </p>
+
+    <button id="startBtn" type="button">
+        開始する
+    </button>
+
     <div class="info">
-        <strong>使い方</strong>：<br>
+        <strong>使い方</strong><br>
         1. クラウドサービスを選択<br>
         2. アカウント情報を入力<br>
-        3. 録画設定（FPS、解像度）<br>
-        4. 録画開始 → 自動でクラウドへ保存
+        3. 録画設定（FPS・解像度）を選択<br>
+        4. 録画開始後、録画データを保存
     </div>
 </div>
+
 <script>
 document.getElementById("startBtn").addEventListener("click", () => {
     sessionStorage.setItem("recording_authenticated", "true");
