@@ -167,15 +167,6 @@
             background: #0284c7;
         }
 
-        .camera {
-            background: #8b5cf6;
-            color: white;
-        }
-
-        .camera:hover:not(:disabled) {
-            background: #7c3aed;
-        }
-
         .status {
             margin-top: 20px;
             padding: 12px;
@@ -299,17 +290,22 @@
             display: block;
             margin-bottom: 8px;
         }
+
+        .mode-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎥 録画モード</h1>
+        <h1>🎥 録画中</h1>
 
         <div id="iosAlert" class="alert hidden">
             <h3>📱 iPhone / iPad の場合</h3>
             <p>
                 ブラウザからの画面録画には対応していません。<br>
-                端末標準の「画面収録」機能を使用してください。
+                カメラ録画を使用してください。
             </p>
         </div>
 
@@ -568,7 +564,7 @@
                     }
                 };
 
-                mediaRecorder.start(1000);
+                mediaRecorder.start(90000); // 90 秒ごとにチャンク分割
 
                 startTime = Date.now();
                 timerInterval = setInterval(updateTimer, 1000);
@@ -667,7 +663,7 @@
                     console.error("MediaRecorder エラー:", event.error);
                 };
 
-                mediaRecorder.start(1000);
+                mediaRecorder.start(90000); // 90 秒ごとにチャンク分割
 
                 startTime = Date.now();
                 timerInterval = setInterval(updateTimer, 1000);
