@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>録画設定</title>
+    <title>録画中</title>
     <style>
         * {
             box-sizing: border-box;
@@ -26,56 +26,93 @@
             border-radius: 16px;
             padding: 40px;
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
         h1 {
             color: #333;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             text-align: center;
             font-size: 24px;
         }
 
-        .form-group {
+        .info {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .info p {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .preview-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
             margin-bottom: 25px;
         }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        select,
-        input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
+        .stat {
+            background: #f8f9fa;
+            padding: 12px;
             border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            text-align: center;
         }
 
-        select:focus,
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .help-text {
+        .stat-label {
             font-size: 12px;
             color: #888;
-            margin-top: 6px;
-            line-height: 1.5;
+            margin-bottom: 4px;
         }
 
-        .button-group {
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .controls {
             display: flex;
             gap: 12px;
-            margin-top: 30px;
+            margin-bottom: 20px;
         }
 
         button {
@@ -89,14 +126,65 @@
             transition: all 0.3s;
         }
 
-        .primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .record {
+            background: #ef4444;
             color: white;
         }
 
-        .primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        .record:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .stop {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .stop:hover:not(:disabled) {
+            background: #d97706;
+        }
+
+        .merge {
+            background: #22c55e;
+            color: white;
+        }
+
+        .merge:hover:not(:disabled) {
+            background: #16a34a;
+        }
+
+        .settings {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .settings:hover:not(:disabled) {
+            background: #0284c7;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            min-height: 60px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
         }
 
         .secondary {
@@ -108,269 +196,543 @@
             background: #e0e0e0;
         }
 
-        .storage-info {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
+        .hidden {
+            display: none;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #f59e0b;
             padding: 16px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             border-radius: 0 8px 8px 0;
         }
 
-        .storage-info h3 {
-            color: #333;
+        .alert h3 {
+            color: #856404;
             font-size: 14px;
             margin-bottom: 8px;
         }
 
-        .storage-info p {
-            color: #666;
+        .alert p {
+            color: #856404;
             font-size: 13px;
             line-height: 1.6;
-        }
-
-        .status {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .status.info {
-            background: #e3f2fd;
-            color: #1565c0;
-            display: block;
-        }
-
-        .status.error {
-            background: #ffebee;
-            color: #c62828;
-            display: block;
-        }
-
-        .status.success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎥 録画設定</h1>
+        <h1>🎥 録画中</h1>
 
-        <div class="storage-info">
-            <h3>💾 保存先について</h3>
+        <div id="iosAlert" class="alert hidden">
+            <h3>📱 iPhone / iPad の場合</h3>
             <p>
-                Chrome・Edgeなど対応ブラウザでは、USBメモリ、SDカード、外部SSD、内部ストレージから保存先を直接選択できます。<br>
-                Firefox・Safari・iPhone・iPadなどでは、ブラウザのダウンロードまたは共有機能を使用します。
+                ブラウザからの画面録画には対応していません。<br>
+                端末標準の「画面収録」機能を使用してください。
             </p>
         </div>
 
-        <div class="form-group">
-            <label for="storage">保存先</label>
-            <select id="storage">
-                <option value="default">デフォルト（ダウンロードフォルダ）</option>
-                <option value="custom">カスタム（USB / SD / SSD など）</option>
-            </select>
-            <p class="help-text">
-                カスタムを選択すると、録画開始時に保存先を選択するダイアログが表示されます（対応ブラウザのみ）。
+        <div class="info">
+            <h3>💾 保存について</h3>
+            <p id="storageInfo">
+                録画データを結合後、端末に最適化された方法で保存されます。
             </p>
         </div>
 
-        <div class="form-group">
-            <label for="fps">フレームレート（FPS）</label>
-            <select id="fps">
-                <option value="30">30 FPS（標準）</option>
-                <option value="60">60 FPS（高品質）</option>
-                <option value="120">120 FPS（超高品質）</option>
-            </select>
-            <p class="help-text">
-                高いFPSほど滑らかになりますが、ファイルサイズが大きくなります。
-            </p>
+        <div class="preview">
+            <video id="preview" autoplay muted playsinline></video>
+            <div id="previewPlaceholder" class="preview-placeholder">
+                録画開始後、プレビューが表示されます
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="resolution">解像度</label>
-            <select id="resolution">
-                <option value="1280x720">720p（HD）</option>
-                <option value="1920x1080">1080p（フルHD）</option>
-                <option value="2560x1440">1440p（2K）</option>
-                <option value="3840x2160">2160p（4K）</option>
-            </select>
-            <p class="help-text">
-                高い解像度ほど鮮明になりますが、ファイルサイズが大きくなります。
-            </p>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">経過時間</div>
+                <div id="elapsedTime" class="stat-value">00:00:00</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">フレーム</div>
+                <div id="frameCount" class="stat-value">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">チャンク</div>
+                <div id="chunkCount" class="stat-value">0</div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="audio">音声ソース</label>
-            <select id="audio">
-                <option value="system">システム音声（PC の音）</option>
-                <option value="mic">マイク（自分の声）</option>
-                <option value="both">両方</option>
-                <option value="none">なし（無音）</option>
-            </select>
-            <p class="help-text">
-                システム音声はPCの音、マイクは自分の声を録音します。
-            </p>
-        </div>
-
-        <div id="status" class="status"></div>
-
-        <div class="button-group">
-            <button type="button" class="secondary" id="backButton">
-                ← 戻る
-            </button>
-            <button type="button" class="primary" id="startButton">
+        <div class="controls">
+            <button id="recordButton" class="record" type="button">
                 録画開始
             </button>
+            <button id="stopButton" class="stop" type="button" disabled>
+                録画停止
+            </button>
+        </div>
+
+        <div class="button-group">
+            <button id="mergeButton" class="merge" type="button" disabled>
+                録画データを結合
+            </button>
+            <button id="settingsButton" class="settings" type="button">
+                設定へ戻る
+            </button>
+        </div>
+
+        <div id="status" class="status">
+            録画準備が完了しました。
         </div>
     </div>
 
     <script>
-        const storageSelect = document.getElementById("storage");
-        const fpsSelect = document.getElementById("fps");
-        const resolutionSelect = document.getElementById("resolution");
-        const audioSelect = document.getElementById("audio");
+        const preview = document.getElementById("preview");
+        const previewPlaceholder = document.getElementById("previewPlaceholder");
+        const elapsedTimeDiv = document.getElementById("elapsedTime");
+        const frameCountDiv = document.getElementById("frameCount");
+        const chunkCountDiv = document.getElementById("chunkCount");
+        const recordButton = document.getElementById("recordButton");
+        const stopButton = document.getElementById("stopButton");
+        const mergeButton = document.getElementById("mergeButton");
+        const settingsButton = document.getElementById("settingsButton");
         const statusDiv = document.getElementById("status");
-        const backButton = document.getElementById("backButton");
-        const startButton = document.getElementById("startButton");
+        const storageInfo = document.getElementById("storageInfo");
+        const iosAlert = document.getElementById("iosAlert");
 
+        let mediaRecorder = null;
+        let chunks = [];
+        let startTime = null;
+        let timerInterval = null;
+        let frameCount = 0;
+        let chunkCount = 0;
+        let settings = null;
         let directoryHandle = null;
-        let customStorageSelected = false;
+        let chunkFiles = [];
+        let mergedFileUrl = null;
+        let mergedFilename = null;
+        let mergedFileSize = 0;
 
-        function showStatus(message, type = "info") {
+        function showStatus(message) {
             statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
         }
 
-        async function selectCustomStorage() {
-            if (typeof window.showDirectoryPicker !== "function") {
-                showStatus(
-                    "お使いのブラウザはカスタム保存先に対応していません。デフォルト保存を使用します。",
-                    "error"
-                );
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
 
-                storageSelect.value = "default";
-                customStorageSelected = false;
+            return [
+                String(hours).padStart(2, "0"),
+                String(minutes).padStart(2, "0"),
+                String(seconds).padStart(2, "0")
+            ].join(":");
+        }
+
+        function updateTimer() {
+            if (!startTime) return;
+
+            const elapsed = Date.now() - startTime;
+            elapsedTimeDiv.textContent = formatTime(elapsed);
+        }
+
+        function loadSettings() {
+            const settingsJson = sessionStorage.getItem("recorderSettings");
+
+            if (!settingsJson) {
+                showStatus("設定が見つかりません。設定画面へ戻ります。");
+                setTimeout(() => {
+                    window.location.href = "recorder.html";
+                }, 2000);
 
                 return null;
             }
 
+            return JSON.parse(settingsJson);
+        }
+
+        function getStorageDescription() {
+            if (!settings) {
+                return "設定読み込み中...";
+            }
+
+            if (settings.useCustomStorage && settings.directoryHandle) {
+                return `カスタム保存先：${settings.directoryHandle.name}（USB / SD / SSD など）`;
+            }
+
+            const isFileSystemAccessSupported =
+                typeof window.showDirectoryPicker === "function";
+
+            if (isFileSystemAccessSupported) {
+                return "デフォルト保存先（ダウンロードフォルダ）";
+            }
+
+            return "ブラウザダウンロード（非対応ブラウザ）";
+        }
+
+        function isIOS() {
+            return [
+                'iPad Simulator',
+                'iPhone Simulator',
+                'iPod Simulator',
+                'iPad',
+                'iPhone',
+                'iPod'
+            ].includes(navigator.platform)
+            || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+        }
+
+        async function startRecording() {
             try {
-                const handle = await window.showDirectoryPicker({
-                    mode: "readwrite"
-                });
+                const displayMediaOptions = {
+                    video: {
+                        displaySurface: "monitor",
+                        frameRate: settings.fps
+                    },
+                    audio: settings.audioSource !== "none",
+                    selfBrowserSurface: "include",
+                    surfaceSwitching: "include",
+                    systemAudio: settings.audioSource === "system" ||
+                               settings.audioSource === "both"
+                        ? "include"
+                        : "exclude"
+                };
 
-                const permission = await handle.queryPermission({
-                    mode: "readwrite"
-                });
+                const resolutionParts = settings.resolution.split("x");
+                const width = parseInt(resolutionParts[0]);
+                const height = parseInt(resolutionParts[1]);
 
-                if (permission !== "granted") {
-                    const requestPermission = await handle.requestPermission({
-                        mode: "readwrite"
-                    });
+                displayMediaOptions.video.width = { ideal: width };
+                displayMediaOptions.video.height = { ideal: height };
 
-                    if (requestPermission !== "granted") {
-                        showStatus(
-                            "保存先のアクセス許可が得られませんでした。デフォルト保存を使用します。",
-                            "error"
-                        );
-
-                        storageSelect.value = "default";
-                        customStorageSelected = false;
-
-                        return null;
-                    }
-                }
-
-                directoryHandle = handle;
-                customStorageSelected = true;
-
-                showStatus(
-                    `✅ 保存先を選択しました：${handle.name}`,
-                    "success"
+                const stream = await navigator.mediaDevices.getDisplayMedia(
+                    displayMediaOptions
                 );
 
-                return handle;
+                preview.srcObject = stream;
+                previewPlaceholder.classList.add("hidden");
+
+                const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+                    ? "video/webm;codecs=vp9"
+                    : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+                    ? "video/webm;codecs=vp8"
+                    : "video/webm";
+
+                const recorderOptions = {
+                    mimeType,
+                    videoBitsPerSecond: settings.fps >= 60 ? 8000000 : 4000000
+                };
+
+                mediaRecorder = new MediaRecorder(stream, recorderOptions);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) {
+                        chunks.push(event.data);
+                        chunkCount++;
+                        chunkCountDiv.textContent = chunkCount;
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    showStatus(
+                        `録画を停止しました。\n` +
+                        `チャンク数：${chunkCount}\n` +
+                        `「録画データを結合」を押して保存してください。`
+                    );
+
+                    stream.getTracks().forEach((track) => track.stop());
+                };
+
+                mediaRecorder.start(1000);
+
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+
+                recordButton.disabled = true;
+                stopButton.disabled = false;
+                mergeButton.disabled = true;
+
+                showStatus(
+                    `録画を開始しました。\n` +
+                    `FPS: ${settings.fps}\n` +
+                    `解像度：${settings.resolution}\n` +
+                    `音声：${settings.audioSource}\n` +
+                    `保存先：${getStorageDescription()}`
+                );
 
             } catch (error) {
-                console.error("保存先選択エラー:", error);
+                console.error("録画開始エラー:", error);
 
-                if (error.name === "AbortError") {
+                if (error.name === "NotAllowedError") {
                     showStatus(
-                        "保存先の選択をキャンセルしました。デフォルト保存を使用します。",
-                        "info"
+                        "画面共有の許可が得られませんでした。\n" +
+                        "ブラウザの許可設定を確認してください。"
+                    );
+                } else if (error.name === "NotFoundError") {
+                    showStatus(
+                        "録画可能なディスプレイが見つかりませんでした。"
+                    );
+                } else if (error.name === "NotSupportedError") {
+                    showStatus(
+                        "このブラウザは画面録画に対応していません。\n" +
+                        "端末標準の画面録画機能を使用してください。"
                     );
                 } else {
                     showStatus(
-                        `保存先の選択に失敗しました：${error.message}`,
-                        "error"
+                        `録画開始エラー：${error.message}\n` +
+                        `このブラウザでは画面録画に対応していない可能性があります。`
                     );
                 }
 
-                storageSelect.value = "default";
-                customStorageSelected = false;
-
-                return null;
+                recordButton.disabled = false;
             }
         }
 
-        storageSelect.addEventListener("change", async () => {
-            if (storageSelect.value === "custom") {
-                await selectCustomStorage();
-            } else {
-                directoryHandle = null;
-                customStorageSelected = false;
-                showStatus("", "info");
+        function stopRecording() {
+            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                return;
             }
+
+            mediaRecorder.stop();
+
+            clearInterval(timerInterval);
+            timerInterval = null;
+
+            recordButton.disabled = false;
+            stopButton.disabled = true;
+            mergeButton.disabled = false;
+
+            const elapsed = Date.now() - startTime;
+            frameCount = Math.floor(elapsed / 1000) * settings.fps;
+            frameCountDiv.textContent = frameCount;
+        }
+
+        function createFilename() {
+            const now = new Date();
+
+            const dateText = [
+                now.getFullYear(),
+                String(now.getMonth() + 1).padStart(2, "0"),
+                String(now.getDate()).padStart(2, "0")
+            ].join("-");
+
+            const timeText = [
+                String(now.getHours()).padStart(2, "0"),
+                String(now.getMinutes()).padStart(2, "0"),
+                String(now.getSeconds()).padStart(2, "0")
+            ].join("-");
+
+            return `screen-recording-${dateText}-${timeText}.webm`;
+        }
+
+        async function saveWithFilePicker(blob, filename) {
+            const fileHandle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [
+                    {
+                        description: "WebM Video",
+                        accept: {
+                            "video/webm": [".webm"]
+                        }
+                    }
+                ]
+            });
+
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+
+            return fileHandle.name || filename;
+        }
+
+        function saveWithBrowserDownload(blob, filename) {
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = objectUrl;
+            link.download = filename;
+            link.style.display = "none";
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            setTimeout(() => {
+                URL.revokeObjectURL(objectUrl);
+            }, 30000);
+        }
+
+        async function mergeAndSaveRecording() {
+            if (chunks.length === 0) {
+                showStatus("保存する録画データがありません。");
+                return;
+            }
+
+            mergeButton.disabled = true;
+            showStatus("録画データを結合しています...");
+
+            try {
+                const blob = new Blob(chunks, { type: "video/webm" });
+                const filename = createFilename();
+                mergedFileSize = blob.size;
+                mergedFilename = filename;
+
+                const isFileSystemAccessSupported =
+                    typeof window.showSaveFilePicker === "function";
+
+                if (
+                    isFileSystemAccessSupported &&
+                    settings.useCustomStorage &&
+                    settings.directoryHandle
+                ) {
+                    try {
+                        const fileHandle = await settings.directoryHandle.getFileHandle(
+                            filename,
+                            { create: true }
+                        );
+
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+
+                        showStatus(
+                            `✅ 保存完了\n` +
+                            `ファイル名：${filename}\n` +
+                            `サイズ：${(blob.size / 1024 / 1024).toFixed(2)} MB\n` +
+                            `保存先：${settings.directoryHandle.name}`
+                        );
+
+                        return;
+
+                    } catch (error) {
+                        console.warn(
+                            "カスタム保存先への保存に失敗。通常ダウンロードへ切り替えます。",
+                            error
+                        );
+                    }
+                }
+
+                if (isFileSystemAccessSupported) {
+                    try {
+                        showStatus(
+                            "保存先を選択してください。\n" +
+                            "USB、SD カード、外部 SSD も選択できます。"
+                        );
+
+                        const savedName = await saveWithFilePicker(blob, filename);
+
+                        showStatus(
+                            `✅ 保存完了\n` +
+                            `ファイル名：${savedName}\n` +
+                            `サイズ：${(blob.size / 1024 / 1024).toFixed(2)} MB`
+                        );
+
+                        return;
+
+                    } catch (error) {
+                        if (error.name === "AbortError") {
+                            showStatus("保存先の選択をキャンセルしました。");
+                            mergeButton.disabled = false;
+                            return;
+                        }
+
+                        console.warn(
+                            "File System Access API 保存失敗。通常ダウンロードへ切り替えます。",
+                            error
+                        );
+                    }
+                }
+
+                showStatus(
+                    "ダウンロードを開始します。\n" +
+                    "保存先はブラウザまたは端末の設定で確認してください。"
+                );
+
+                saveWithBrowserDownload(blob, filename);
+
+                setTimeout(() => {
+                    showStatus(
+                        `✅ ダウンロード完了\n` +
+                        `ファイル名：${filename}\n` +
+                        `サイズ：${(blob.size / 1024 / 1024).toFixed(2)} MB\n` +
+                        `保存先はブラウザのダウンロード設定を確認してください。`
+                    );
+                }, 3000);
+
+            } catch (error) {
+                console.error("結合・保存エラー:", error);
+
+                showStatus(
+                    `結合・保存に失敗しました：${error.message}`
+                );
+
+                mergeButton.disabled = false;
+            }
+        }
+
+        settings = loadSettings();
+
+        if (settings) {
+            storageInfo.textContent = getStorageDescription();
+        }
+
+        // iOS 検出
+        if (isIOS()) {
+            iosAlert.classList.remove("hidden");
+            recordButton.disabled = true;
+            stopButton.disabled = true;
+            mergeButton.disabled = true;
+            showStatus(
+                "iPhone / iPad ではブラウザからの画面録画に対応していません。\n" +
+                "端末標準の「画面収録」機能を使用してください。"
+            );
+        }
+
+        recordButton.addEventListener("click", startRecording);
+        stopButton.addEventListener("click", stopRecording);
+        mergeButton.addEventListener("click", mergeAndSaveRecording);
+
+        settingsButton.addEventListener("click", () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                const confirmStop = confirm(
+                    "録画中です。設定へ戻ると録画が中断されます。\n" +
+                    "よろしいですか？"
+                );
+
+                if (!confirmStop) {
+                    return;
+                }
+
+                stopRecording();
+            }
+
+            window.location.href = "recorder.html";
         });
 
-        backButton.addEventListener("click", () => {
-            window.location.href = "index.html";
-        });
-
-        startButton.addEventListener("click", async () => {
-            const fps = parseInt(fpsSelect.value);
-            const resolution = resolutionSelect.value;
-            const audioSource = audioSelect.value;
-
-            const settings = {
-                fps,
-                resolution,
-                audioSource,
-                useCustomStorage: customStorageSelected,
-                directoryHandle: directoryHandle
-            };
-
-            sessionStorage.setItem("recorderSettings", JSON.stringify(settings));
-
-            window.location.href = "record.html";
+        window.addEventListener("beforeunload", (event) => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                event.preventDefault();
+                event.returnValue = "";
+            }
         });
 
         (async () => {
             const isFileSystemAccessSupported =
                 typeof window.showDirectoryPicker === "function";
 
-            if (!isFileSystemAccessSupported) {
-                storageSelect.value = "default";
-                storageSelect.disabled = true;
+            const isGetDisplayMediaSupported =
+                navigator.mediaDevices &&
+                navigator.mediaDevices.getDisplayMedia;
 
-                const customOption = storageSelect.querySelector(
-                    'option[value="custom"]'
-                );
-
-                if (customOption) {
-                    customOption.textContent =
-                        "カスタム（非対応ブラウザ）";
-                    customOption.disabled = true;
-                }
-
+            if (!isGetDisplayMediaSupported) {
                 showStatus(
-                    "お使いのブラウザはカスタム保存先に対応していません。デフォルト保存を使用します。",
-                    "info"
+                    "お使いのブラウザは画面録画に対応していません。\n" +
+                    "端末標準の画面録画機能を使用してください。"
                 );
+
+                recordButton.disabled = true;
+                stopButton.disabled = true;
+                mergeButton.disabled = true;
             }
         })();
     </script>
