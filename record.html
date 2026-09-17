@@ -167,6 +167,15 @@
             background: #0284c7;
         }
 
+        .camera {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .camera:hover:not(:disabled) {
+            background: #7c3aed;
+        }
+
         .status {
             margin-top: 20px;
             padding: 12px;
@@ -219,11 +228,82 @@
             font-size: 13px;
             line-height: 1.6;
         }
+
+        .android-tip {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .android-tip h3 {
+            color: #1565c0;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .android-tip p {
+            color: #1565c0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .mode-selector {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .mode-selector h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            flex: 1;
+            max-width: 200px;
+            padding: 16px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-btn:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .mode-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .mode-btn .icon {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎥 録画中</h1>
+        <h1>🎥 録画モード</h1>
 
         <div id="iosAlert" class="alert hidden">
             <h3>📱 iPhone / iPad の場合</h3>
@@ -233,11 +313,39 @@
             </p>
         </div>
 
+        <div id="androidAlert" class="android-tip hidden">
+            <h3>🤖 Android の場合</h3>
+            <p>
+                画面録画がうまくいかない場合は、カメラ録画を使用してください。<br>
+                または、端末標準の画面録画機能をご利用ください。
+            </p>
+        </div>
+
         <div class="info">
             <h3>💾 保存について</h3>
             <p id="storageInfo">
                 録画データを結合後、端末に最適化された方法で保存されます。
             </p>
+        </div>
+
+        <div class="mode-selector">
+            <h3>録画モードを選択</h3>
+            <div class="mode-buttons">
+                <button type="button" class="mode-btn selected" id="screenModeBtn">
+                    <span class="icon">🖥️</span>
+                    画面録画
+                    <div style="font-size:12px;margin-top:4px;opacity:0.8">
+                        PC・Mac・一部 Android
+                    </div>
+                </button>
+                <button type="button" class="mode-btn" id="cameraModeBtn">
+                    <span class="icon">📷</span>
+                    カメラ録画
+                    <div style="font-size:12px;margin-top:4px;opacity:0.8">
+                        全機種対応
+                    </div>
+                </button>
+            </div>
         </div>
 
         <div class="preview">
@@ -263,7 +371,7 @@
         </div>
 
         <div class="controls">
-            <button id="recordButton" class="record" type="button">
+            <button id="recordButton" class="record" type="button" disabled>
                 録画開始
             </button>
             <button id="stopButton" class="stop" type="button" disabled>
@@ -281,7 +389,7 @@
         </div>
 
         <div id="status" class="status">
-            録画準備が完了しました。
+            録画モードを選択してください。
         </div>
     </div>
 
@@ -298,8 +406,12 @@
         const statusDiv = document.getElementById("status");
         const storageInfo = document.getElementById("storageInfo");
         const iosAlert = document.getElementById("iosAlert");
+        const androidAlert = document.getElementById("androidAlert");
+        const screenModeBtn = document.getElementById("screenModeBtn");
+        const cameraModeBtn = document.getElementById("cameraModeBtn");
 
         let mediaRecorder = null;
+        let currentStream = null;
         let chunks = [];
         let startTime = null;
         let timerInterval = null;
@@ -307,7 +419,7 @@
         let chunkCount = 0;
         let settings = null;
         let directoryHandle = null;
-        let chunkFiles = [];
+        let recordingMode = "screen";
         let mergedFileUrl = null;
         let mergedFilename = null;
         let mergedFileSize = 0;
@@ -351,25 +463,6 @@
             return JSON.parse(settingsJson);
         }
 
-        function getStorageDescription() {
-            if (!settings) {
-                return "設定読み込み中...";
-            }
-
-            if (settings.useCustomStorage && settings.directoryHandle) {
-                return `カスタム保存先：${settings.directoryHandle.name}（USB / SD / SSD など）`;
-            }
-
-            const isFileSystemAccessSupported =
-                typeof window.showDirectoryPicker === "function";
-
-            if (isFileSystemAccessSupported) {
-                return "デフォルト保存先（ダウンロードフォルダ）";
-            }
-
-            return "ブラウザダウンロード（非対応ブラウザ）";
-        }
-
         function isIOS() {
             return [
                 'iPad Simulator',
@@ -382,12 +475,37 @@
             || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
         }
 
-        async function startRecording() {
+        function isAndroid() {
+            return /Android/i.test(navigator.userAgent);
+        }
+
+        function getSupportedMimeType() {
+            const mimeTypes = [
+                "video/webm;codecs=vp9,opus",
+                "video/webm;codecs=vp9",
+                "video/webm;codecs=vp8,opus",
+                "video/webm;codecs=vp8",
+                "video/webm",
+                "video/mp4"
+            ];
+
+            for (const mimeType of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(mimeType)) {
+                    return mimeType;
+                }
+            }
+
+            return "";
+        }
+
+        async function startScreenRecording() {
             try {
                 const displayMediaOptions = {
                     video: {
-                        displaySurface: "monitor",
-                        frameRate: settings.fps
+                        displaySurface: "browser",
+                        frameRate: { ideal: settings.fps },
+                        width: { ideal: parseInt(settings.resolution.split("x")[0]) },
+                        height: { ideal: parseInt(settings.resolution.split("x")[1]) }
                     },
                     audio: settings.audioSource !== "none",
                     selfBrowserSurface: "include",
@@ -398,30 +516,24 @@
                         : "exclude"
                 };
 
-                const resolutionParts = settings.resolution.split("x");
-                const width = parseInt(resolutionParts[0]);
-                const height = parseInt(resolutionParts[1]);
-
-                displayMediaOptions.video.width = { ideal: width };
-                displayMediaOptions.video.height = { ideal: height };
-
                 const stream = await navigator.mediaDevices.getDisplayMedia(
                     displayMediaOptions
                 );
 
+                currentStream = stream;
                 preview.srcObject = stream;
                 previewPlaceholder.classList.add("hidden");
 
-                const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-                    ? "video/webm;codecs=vp9"
-                    : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-                    ? "video/webm;codecs=vp8"
-                    : "video/webm";
+                const mimeType = getSupportedMimeType();
 
-                const recorderOptions = {
-                    mimeType,
-                    videoBitsPerSecond: settings.fps >= 60 ? 8000000 : 4000000
-                };
+                const recorderOptions = mimeType
+                    ? {
+                        mimeType,
+                        videoBitsPerSecond: settings.fps >= 60 ? 4000000 : 2500000
+                    }
+                    : {
+                        videoBitsPerSecond: settings.fps >= 60 ? 4000000 : 2500000
+                    };
 
                 mediaRecorder = new MediaRecorder(stream, recorderOptions);
 
@@ -440,7 +552,20 @@
                         `「録画データを結合」を押して保存してください。`
                     );
 
-                    stream.getTracks().forEach((track) => track.stop());
+                    if (currentStream) {
+                        currentStream.getTracks().forEach((track) => track.stop());
+                    }
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    console.error("MediaRecorder エラー:", event.error);
+
+                    if (event.error && event.error.name === "EncodingError") {
+                        showStatus(
+                            "エンコードエラーが発生しました。\n" +
+                            "解像度または FPS を下げて再試行してください。"
+                        );
+                    }
                 };
 
                 mediaRecorder.start(1000);
@@ -453,38 +578,142 @@
                 mergeButton.disabled = true;
 
                 showStatus(
-                    `録画を開始しました。\n` +
+                    `画面録画を開始しました。\n` +
                     `FPS: ${settings.fps}\n` +
                     `解像度：${settings.resolution}\n` +
-                    `音声：${settings.audioSource}\n` +
-                    `保存先：${getStorageDescription()}`
+                    `音声：${settings.audioSource}`
                 );
 
             } catch (error) {
-                console.error("録画開始エラー:", error);
+                console.error("画面録画エラー:", error);
 
                 if (error.name === "NotAllowedError") {
                     showStatus(
-                        "画面共有の許可が得られませんでした。\n" +
-                        "ブラウザの許可設定を確認してください。"
-                    );
-                } else if (error.name === "NotFoundError") {
-                    showStatus(
-                        "録画可能なディスプレイが見つかりませんでした。"
+                        "画面共有の許可が得られませんでした。"
                     );
                 } else if (error.name === "NotSupportedError") {
                     showStatus(
                         "このブラウザは画面録画に対応していません。\n" +
-                        "端末標準の画面録画機能を使用してください。"
+                        "カメラ録画を使用してください。"
+                    );
+                } else if (error.name === "OverconstrainedError") {
+                    showStatus(
+                        "指定した解像度または FPS がサポートされていません。\n" +
+                        "低い値で再試行してください。"
                     );
                 } else {
                     showStatus(
-                        `録画開始エラー：${error.message}\n` +
-                        `このブラウザでは画面録画に対応していない可能性があります。`
+                        `画面録画エラー：${error.message}\n` +
+                        "カメラ録画を使用してください。"
                     );
                 }
 
                 recordButton.disabled = false;
+            }
+        }
+
+        async function startCameraRecording() {
+            try {
+                const videoConstraints = {
+                    facingMode: settings.audioSource === "mic" ||
+                               settings.audioSource === "both"
+                        ? "user"
+                        : "environment"
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: videoConstraints,
+                    audio: settings.audioSource !== "none"
+                });
+
+                currentStream = stream;
+                preview.srcObject = stream;
+                previewPlaceholder.classList.add("hidden");
+
+                const mimeType = getSupportedMimeType();
+
+                const recorderOptions = mimeType
+                    ? {
+                        mimeType,
+                        videoBitsPerSecond: settings.fps >= 60 ? 4000000 : 2500000
+                    }
+                    : {
+                        videoBitsPerSecond: settings.fps >= 60 ? 4000000 : 2500000
+                    };
+
+                mediaRecorder = new MediaRecorder(stream, recorderOptions);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) {
+                        chunks.push(event.data);
+                        chunkCount++;
+                        chunkCountDiv.textContent = chunkCount;
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    showStatus(
+                        `録画を停止しました。\n` +
+                        `チャンク数：${chunkCount}\n` +
+                        `「録画データを結合」を押して保存してください。`
+                    );
+
+                    if (currentStream) {
+                        currentStream.getTracks().forEach((track) => track.stop());
+                    }
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    console.error("MediaRecorder エラー:", event.error);
+                };
+
+                mediaRecorder.start(1000);
+
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+
+                recordButton.disabled = true;
+                stopButton.disabled = false;
+                mergeButton.disabled = true;
+
+                showStatus(
+                    `カメラ録画を開始しました。\n` +
+                    `FPS: ${settings.fps}\n` +
+                    `解像度：${settings.resolution}\n` +
+                    `音声：${settings.audioSource}`
+                );
+
+            } catch (error) {
+                console.error("カメラ録画エラー:", error);
+
+                if (error.name === "NotAllowedError") {
+                    showStatus(
+                        "カメラ・マイクの許可が得られませんでした。\n" +
+                        "ブラウザの許可設定を確認してください。"
+                    );
+                } else if (error.name === "NotFoundError") {
+                    showStatus(
+                        "カメラが見つかりませんでした。"
+                    );
+                } else {
+                    showStatus(
+                        `カメラ録画エラー：${error.message}`
+                    );
+                }
+
+                recordButton.disabled = false;
+            }
+        }
+
+        function startRecording() {
+            chunks = [];
+            chunkCount = 0;
+            chunkCountDiv.textContent = "0";
+
+            if (recordingMode === "screen") {
+                startScreenRecording();
+            } else {
+                startCameraRecording();
             }
         }
 
@@ -522,27 +751,9 @@
                 String(now.getSeconds()).padStart(2, "0")
             ].join("-");
 
-            return `screen-recording-${dateText}-${timeText}.webm`;
-        }
+            const modePrefix = recordingMode === "screen" ? "screen" : "camera";
 
-        async function saveWithFilePicker(blob, filename) {
-            const fileHandle = await window.showSaveFilePicker({
-                suggestedName: filename,
-                types: [
-                    {
-                        description: "WebM Video",
-                        accept: {
-                            "video/webm": [".webm"]
-                        }
-                    }
-                ]
-            });
-
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-
-            return fileHandle.name || filename;
+            return `${modePrefix}-recording-${dateText}-${timeText}.webm`;
         }
 
         function saveWithBrowserDownload(blob, filename) {
@@ -577,72 +788,6 @@
                 mergedFileSize = blob.size;
                 mergedFilename = filename;
 
-                const isFileSystemAccessSupported =
-                    typeof window.showSaveFilePicker === "function";
-
-                if (
-                    isFileSystemAccessSupported &&
-                    settings.useCustomStorage &&
-                    settings.directoryHandle
-                ) {
-                    try {
-                        const fileHandle = await settings.directoryHandle.getFileHandle(
-                            filename,
-                            { create: true }
-                        );
-
-                        const writable = await fileHandle.createWritable();
-                        await writable.write(blob);
-                        await writable.close();
-
-                        showStatus(
-                            `✅ 保存完了\n` +
-                            `ファイル名：${filename}\n` +
-                            `サイズ：${(blob.size / 1024 / 1024).toFixed(2)} MB\n` +
-                            `保存先：${settings.directoryHandle.name}`
-                        );
-
-                        return;
-
-                    } catch (error) {
-                        console.warn(
-                            "カスタム保存先への保存に失敗。通常ダウンロードへ切り替えます。",
-                            error
-                        );
-                    }
-                }
-
-                if (isFileSystemAccessSupported) {
-                    try {
-                        showStatus(
-                            "保存先を選択してください。\n" +
-                            "USB、SD カード、外部 SSD も選択できます。"
-                        );
-
-                        const savedName = await saveWithFilePicker(blob, filename);
-
-                        showStatus(
-                            `✅ 保存完了\n` +
-                            `ファイル名：${savedName}\n` +
-                            `サイズ：${(blob.size / 1024 / 1024).toFixed(2)} MB`
-                        );
-
-                        return;
-
-                    } catch (error) {
-                        if (error.name === "AbortError") {
-                            showStatus("保存先の選択をキャンセルしました。");
-                            mergeButton.disabled = false;
-                            return;
-                        }
-
-                        console.warn(
-                            "File System Access API 保存失敗。通常ダウンロードへ切り替えます。",
-                            error
-                        );
-                    }
-                }
-
                 showStatus(
                     "ダウンロードを開始します。\n" +
                     "保存先はブラウザまたは端末の設定で確認してください。"
@@ -673,20 +818,48 @@
         settings = loadSettings();
 
         if (settings) {
-            storageInfo.textContent = getStorageDescription();
+            storageInfo.textContent = "ブラウザダウンロード（モバイル最適化）";
         }
 
         // iOS 検出
         if (isIOS()) {
             iosAlert.classList.remove("hidden");
-            recordButton.disabled = true;
-            stopButton.disabled = true;
-            mergeButton.disabled = true;
+            screenModeBtn.disabled = true;
+            screenModeBtn.style.opacity = "0.5";
+            screenModeBtn.style.cursor = "not-allowed";
+            cameraModeBtn.click();
             showStatus(
-                "iPhone / iPad ではブラウザからの画面録画に対応していません。\n" +
-                "端末標準の「画面収録」機能を使用してください。"
+                "iPhone / iPad ではカメラ録画を使用してください。"
             );
         }
+
+        // Android 検出
+        if (isAndroid()) {
+            androidAlert.classList.remove("hidden");
+        }
+
+        // モード選択
+        screenModeBtn.addEventListener("click", () => {
+            recordingMode = "screen";
+            screenModeBtn.classList.add("selected");
+            cameraModeBtn.classList.remove("selected");
+
+            recordButton.disabled = false;
+            recordButton.textContent = "画面録画開始";
+
+            showStatus("画面録画モードを選択しました。");
+        });
+
+        cameraModeBtn.addEventListener("click", () => {
+            recordingMode = "camera";
+            cameraModeBtn.classList.add("selected");
+            screenModeBtn.classList.remove("selected");
+
+            recordButton.disabled = false;
+            recordButton.textContent = "カメラ録画開始";
+
+            showStatus("カメラ録画モードを選択しました。");
+        });
 
         recordButton.addEventListener("click", startRecording);
         stopButton.addEventListener("click", stopRecording);
@@ -716,23 +889,37 @@
             }
         });
 
+        // 初期化
         (async () => {
-            const isFileSystemAccessSupported =
-                typeof window.showDirectoryPicker === "function";
-
             const isGetDisplayMediaSupported =
                 navigator.mediaDevices &&
                 navigator.mediaDevices.getDisplayMedia;
 
-            if (!isGetDisplayMediaSupported) {
+            const isGetUserMediaSupported =
+                navigator.mediaDevices &&
+                navigator.mediaDevices.getUserMedia;
+
+            if (!isGetUserMediaSupported) {
                 showStatus(
-                    "お使いのブラウザは画面録画に対応していません。\n" +
-                    "端末標準の画面録画機能を使用してください。"
+                    "お使いのブラウザは録画に対応していません。"
                 );
 
                 recordButton.disabled = true;
                 stopButton.disabled = true;
                 mergeButton.disabled = true;
+                screenModeBtn.disabled = true;
+                cameraModeBtn.disabled = true;
+            } else if (!isGetDisplayMediaSupported) {
+                cameraModeBtn.click();
+                showStatus(
+                    "画面録画に対応していません。カメラ録画を使用してください。"
+                );
+
+                screenModeBtn.disabled = true;
+                screenModeBtn.style.opacity = "0.5";
+                screenModeBtn.style.cursor = "not-allowed";
+            } else {
+                screenModeBtn.click();
             }
         })();
     </script>
