@@ -14,6 +14,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// 静的ファイルの配信（ルート配置用）
+app.use(express.static(__dirname));
+
 const uploadDir = path.join(__dirname, "uploads");
 const mergedDir = path.join(__dirname, "merged");
 
@@ -208,6 +211,7 @@ app.delete("/cleanup/:sessionId", (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🚀 サーバー起動中: http://localhost:${PORT}`);
-    console.log(`📁 アップロード先: ${uploadDir}`);
+    console.log(`📁 静的ファイル：${__dirname}`);
+    console.log(`📁 アップロード先：${uploadDir}`);
     console.log(`📁 結合先：${mergedDir}`);
 });
