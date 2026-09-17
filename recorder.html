@@ -153,6 +153,28 @@
             color: #2e7d32;
             display: block;
         }
+
+        .resolution-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .resolution-input {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .resolution-input input {
+            flex: 1;
+        }
+
+        .resolution-input span {
+            color: #888;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -162,8 +184,8 @@
         <div class="storage-info">
             <h3>💾 保存先について</h3>
             <p>
-                Chrome・Edgeなど対応ブラウザでは、USBメモリ、SDカード、外部SSD、内部ストレージから保存先を直接選択できます。<br>
-                Firefox・Safari・iPhone・iPadなどでは、ブラウザのダウンロードまたは共有機能を使用します。
+                Chrome・Edge など対応ブラウザでは、USB メモリ、SD カード、外部 SSD、内部ストレージから保存先を直接選択できます。<br>
+                Firefox・Safari・iPhone・iPad などでは、ブラウザのダウンロードまたは共有機能を使用します。
             </p>
         </div>
 
@@ -186,20 +208,37 @@
                 <option value="120">120 FPS（超高品質）</option>
             </select>
             <p class="help-text">
-                高いFPSほど滑らかになりますが、ファイルサイズが大きくなります。
+                高い FPS ほど滑らかになりますが、ファイルサイズが大きくなります。
             </p>
         </div>
 
         <div class="form-group">
-            <label for="resolution">解像度</label>
-            <select id="resolution">
-                <option value="1280x720">720p（HD）</option>
-                <option value="1920x1080">1080p（フルHD）</option>
-                <option value="2560x1440">1440p（2K）</option>
-                <option value="3840x2160">2160p（4K）</option>
+            <label>解像度</label>
+            <select id="resolutionPreset">
+                <option value="preset">プリセットから選択</option>
+                <option value="custom">カスタム（手動入力）</option>
             </select>
+
+            <div id="resolutionPresetList" class="resolution-grid">
+                <select id="resolution">
+                    <option value="640x480">480p（SD）</option>
+                    <option value="1280x720">720p（HD）</option>
+                    <option value="1920x1080" selected>1080p（フル HD）</option>
+                    <option value="2560x1440">1440p（2K）</option>
+                    <option value="3840x2160">2160p（4K）</option>
+                    <option value="5120x2880">2880p（5K）</option>
+                    <option value="7680x4320">4320p（8K）</option>
+                </select>
+            </div>
+
+            <div id="resolutionCustom" class="resolution-input hidden">
+                <input type="number" id="customWidth" placeholder="幅" min="1" max="15360" value="1920">
+                <span>×</span>
+                <input type="number" id="customHeight" placeholder="高さ" min="1" max="8640" value="1080">
+            </div>
+
             <p class="help-text">
-                高い解像度ほど鮮明になりますが、ファイルサイズが大きくなります。
+                プリセットから選択するか、カスタムで任意の解像度を入力できます。
             </p>
         </div>
 
@@ -212,7 +251,7 @@
                 <option value="none">なし（無音）</option>
             </select>
             <p class="help-text">
-                システム音声はPCの音、マイクは自分の声を録音します。
+                システム音声は PC の音、マイクは自分の声を録音します。
             </p>
         </div>
 
@@ -231,7 +270,12 @@
     <script>
         const storageSelect = document.getElementById("storage");
         const fpsSelect = document.getElementById("fps");
+        const resolutionPresetSelect = document.getElementById("resolutionPreset");
         const resolutionSelect = document.getElementById("resolution");
+        const resolutionPresetList = document.getElementById("resolutionPresetList");
+        const resolutionCustom = document.getElementById("resolutionCustom");
+        const customWidth = document.getElementById("customWidth");
+        const customHeight = document.getElementById("customHeight");
         const audioSelect = document.getElementById("audio");
         const statusDiv = document.getElementById("status");
         const backButton = document.getElementById("backButton");
@@ -327,14 +371,43 @@
             }
         });
 
+        resolutionPresetSelect.addEventListener("change", () => {
+            if (resolutionPresetSelect.value === "custom") {
+                resolutionPresetList.classList.add("hidden");
+                resolutionCustom.classList.remove("hidden");
+            } else {
+                resolutionPresetList.classList.remove("hidden");
+                resolutionCustom.classList.add("hidden");
+            }
+        });
+
         backButton.addEventListener("click", () => {
             window.location.href = "index.html";
         });
 
         startButton.addEventListener("click", async () => {
             const fps = parseInt(fpsSelect.value);
-            const resolution = resolutionSelect.value;
             const audioSource = audioSelect.value;
+
+            let resolution;
+
+            if (resolutionPresetSelect.value === "custom") {
+                const width = parseInt(customWidth.value);
+                const height = parseInt(customHeight.value);
+
+                if (!width || !height || width < 1 || height < 1) {
+                    showStatus(
+                        "解像度が正しくありません。1 以上の数値を入力してください。",
+                        "error"
+                    );
+
+                    return;
+                }
+
+                resolution = `${width}x${height}`;
+            } else {
+                resolution = resolutionSelect.value;
+            }
 
             const settings = {
                 fps,
