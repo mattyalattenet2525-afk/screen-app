@@ -282,7 +282,7 @@ video {
                 ⏹ 録画を停止
             </button>
 
-            <button id="merge" type="button" disabled>
+            <button id="merge" type="button" disabled style="display:none">
                 📎 録画データを結合
             </button>
 
@@ -320,7 +320,7 @@ const progressValue = document.getElementById("progressValue");
 const fps = sessionStorage.getItem("selected_fps") || "30";
 const resolution = sessionStorage.getItem("selected_resolution") || "1280x720";
 const storage = sessionStorage.getItem("selected_storage") || "internal";
-const cloud = sessionStorage.getItem("selected_cloud") || "local";
+const cloud = sessionStorage.getItem("selected_cloud") || "s3";
 const externalStorageSelected =
     sessionStorage.getItem("external_storage_selected") === "true";
 
@@ -356,7 +356,10 @@ function getStorageLabel() {
 
 function getCloudLabel() {
     const labels = {
+        s3: "Amazon S3",
+        gcs: "Google Cloud Storage",
         mega: "MEGA",
+        inficloud: "InfiniCloud",
         gdrive: "Google Drive",
         dropbox: "Dropbox",
         onedrive: "OneDrive",
@@ -475,36 +478,62 @@ function updateProgress() {
 }
 
 async function uploadChunk(blob, index) {
-    const response = await fetch("/upload-chunk", {
+    // Renderには録画データ本体を送らない。
+    // Renderから「一時的な直接アップロードURL」だけ取得する。
+    const fileName = `${sessionId}/chunk-${String(index).padStart(6, "0")}.webm`;
+    const contentType = blob.type || "video/webm";
+
+    const urlResponse = await fetch("/create-upload-url", {
         method: "POST",
         headers: {
-            "Content-Type": blob.type || "video/webm",
-            "X-Session-Id": sessionId,
-            "X-Chunk-Index": String(index)
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            provider: cloud,
+            fileName,
+            contentType
+        })
+    });
+
+    let urlResult = {};
+
+    try {
+        urlResult = await urlResponse.json();
+    } catch (error) {
+        urlResult = {};
+    }
+
+    if (!urlResponse.ok || !urlResult.ok || !urlResult.uploadUrl) {
+        throw new Error(
+            urlResult.error ||
+            "クラウドへのアップロードURLを取得できませんでした。"
+        );
+    }
+
+    // 録画データ本体はここからクラウドへ直接送信される。
+    const uploadResponse = await fetch(urlResult.uploadUrl, {
+        method: "PUT",
+        headers: {
+            "Content-Type": contentType
         },
         body: blob
     });
 
-    let result = {};
-
-    try {
-        result = await response.json();
-    } catch (error) {
-        result = {};
-    }
-
-    if (!response.ok || !result.ok) {
-        const message =
-            result.error ||
-            `チャンク ${index + 1} のアップロードに失敗しました。`;
-
-        throw new Error(message);
+    if (!uploadResponse.ok) {
+        throw new Error(
+            `クラウドへのチャンク ${index + 1} のアップロードに失敗しました。` +
+            ` HTTP ${uploadResponse.status}`
+        );
     }
 
     uploadedChunkCount += 1;
     updateProgress();
 
-    return result;
+    return {
+        ok: true,
+        filename: fileName,
+        provider: cloud
+    };
 }
 
 async function waitForUploads() {
@@ -641,7 +670,7 @@ ${getReadableError(event.error)}`;
             startButton.disabled = false;
 
             status.textContent =
-                "最終データをサーバーへ送信しています...";
+                "最終データをクラウドへ保存しています...";
 
             await waitForUploads();
 
@@ -651,18 +680,17 @@ ${getReadableError(event.error)}`;
                 return;
             }
 
-            mergeButton.disabled = false;
+            mergeButton.disabled = true;
 
             if (stopRequestedBySystem) {
                 status.textContent =
                     `⚠️ 録画は自動停止しました。
-送信済みチャンク: ${uploadedChunkCount}
-必要に応じて録画データを結合してください。`;
+クラウドへ保存済みチャンク: ${uploadedChunkCount}`;
             } else {
                 status.textContent =
                     `録画完了。
-送信済みチャンク: ${uploadedChunkCount}
-「録画データを結合」を押してください。`;
+クラウドへ保存済みチャンク: ${uploadedChunkCount}
+保存先: ${getCloudLabel()}`;
             }
         };
 
@@ -719,69 +747,8 @@ function stopRecording() {
 }
 
 async function mergeRecording() {
-    if (!sessionId) {
-        status.textContent =
-            "結合対象の録画セッションがありません。";
-        return;
-    }
-
-    if (merged) {
-        status.textContent =
-            "この録画データはすでに結合されています。";
-        return;
-    }
-
-    mergeButton.disabled = true;
     status.textContent =
-        "録画データを結合しています。録画時間によっては少し時間がかかります...";
-
-    try {
-        await waitForUploads();
-
-        const response = await fetch("/merge", {
-            method: "POST",
-            headers: {
-                "X-Session-Id": sessionId
-            }
-        });
-
-        let result = {};
-
-        try {
-            result = await response.json();
-        } catch (error) {
-            result = {};
-        }
-
-        if (!response.ok || !result.ok) {
-            throw new Error(
-                result.error ||
-                "録画データの結合に失敗しました。"
-            );
-        }
-
-        merged = true;
-        progressValue.style.width = "100%";
-
-        const sizeMB = (result.size / 1024 / 1024).toFixed(2);
-
-        status.textContent =
-            `✅ 結合が完了しました。
-ファイル名: ${result.filename}
-サイズ: ${sizeMB} MB`;
-
-        preview.src = result.downloadUrl;
-        preview.classList.remove("hidden");
-        noPreview.classList.add("hidden");
-
-    } catch (error) {
-        console.error("結合エラー:", error);
-
-        status.textContent =
-            `結合エラー: ${error.message}`;
-
-        mergeButton.disabled = false;
-    }
+        "現在の方式では録画データは90秒ごとのチャンクとしてクラウドへ直接保存されます。";
 }
 
 function goBack() {
