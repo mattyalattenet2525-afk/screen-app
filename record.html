@@ -1,801 +1,378 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>画面録画ツール - 録画</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>録画設定</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-<style>
-* {
-    box-sizing: border-box;
-}
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-body {
-    margin: 0;
-    min-height: 100vh;
-    padding: 25px;
-    font-family: Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-    color: white;
-    background:
-        linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)),
-        url("IMG_0312.jpeg") center / cover no-repeat;
-}
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
 
-.container {
-    width: 94%;
-    max-width: 1100px;
-    margin: auto;
-    padding: 30px;
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(8px);
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 24px;
+        }
 
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    margin-bottom: 25px;
-}
+        .form-group {
+            margin-bottom: 25px;
+        }
 
-h1 {
-    margin: 0;
-    font-size: 1.6rem;
-}
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
 
-button {
-    width: 100%;
-    padding: 13px;
-    margin-top: 10px;
-    font-size: 1rem;
-    font-weight: bold;
-    color: white;
-    border: none;
-    border-radius: 7px;
-    cursor: pointer;
-}
+        select,
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
 
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+        select:focus,
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
 
-#logout {
-    width: auto;
-    margin: 0;
-    padding: 10px 18px;
-    background: #64748b;
-}
+        .help-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
+            line-height: 1.5;
+        }
 
-#logout:hover {
-    background: #475569;
-}
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
 
-.layout {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 20px;
-}
+        button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
 
-.preview-area {
-    min-height: 450px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.45);
-    border-radius: 10px;
-}
+        .primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
 
-video {
-    width: 100%;
-    max-height: 650px;
-    background: #000;
-}
+        .primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
 
-.no-preview {
-    padding: 20px;
-    color: #94a3b8;
-    text-align: center;
-    line-height: 1.7;
-}
+        .secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
 
-.hidden {
-    display: none;
-}
+        .secondary:hover {
+            background: #e0e0e0;
+        }
 
-.controls {
-    padding: 20px;
-    background: rgba(30, 41, 59, 0.85);
-    border-radius: 10px;
-}
+        .storage-info {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+        }
 
-.controls h2 {
-    margin-top: 0;
-}
+        .storage-info h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
 
-.status {
-    padding: 12px;
-    margin-bottom: 15px;
-    text-align: center;
-    line-height: 1.6;
-    background: rgba(15, 23, 42, 0.8);
-    border-radius: 7px;
-    white-space: pre-line;
-}
+        .storage-info p {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+        }
 
-.recording {
-    color: #f87171;
-    font-weight: bold;
-}
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
 
-.settings-display {
-    margin-bottom: 15px;
-    padding: 12px;
-    color: #e2e8f0;
-    background: rgba(15, 23, 42, 0.7);
-    border-radius: 8px;
-    font-size: 0.9rem;
-    line-height: 1.75;
-}
+        .status.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            display: block;
+        }
 
-#start {
-    background: #3b82f6;
-}
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            display: block;
+        }
 
-#start:hover:not(:disabled) {
-    background: #2563eb;
-}
-
-#stop {
-    background: #ef4444;
-}
-
-#stop:hover:not(:disabled) {
-    background: #dc2626;
-}
-
-#merge {
-    background: #8b5cf6;
-}
-
-#merge:hover:not(:disabled) {
-    background: #7c3aed;
-}
-
-#back {
-    background: #64748b;
-}
-
-#back:hover:not(:disabled) {
-    background: #475569;
-}
-
-.info {
-    margin-top: 20px;
-    color: #94a3b8;
-    font-size: 0.85rem;
-    line-height: 1.65;
-}
-
-.progress-wrap {
-    margin: 14px 0;
-}
-
-.progress-label {
-    margin-bottom: 7px;
-    color: #cbd5e1;
-    font-size: 0.82rem;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 10px;
-    overflow: hidden;
-    background: #0f172a;
-    border-radius: 999px;
-}
-
-.progress-value {
-    width: 0%;
-    height: 100%;
-    background: #22c55e;
-    border-radius: inherit;
-    transition: width 0.25s ease;
-}
-
-@media (max-width: 800px) {
-    body {
-        padding: 15px;
-    }
-
-    .container {
-        width: 100%;
-        padding: 20px;
-    }
-
-    header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    #logout {
-        width: 100%;
-    }
-
-    .layout {
-        grid-template-columns: 1fr;
-    }
-
-    .preview-area {
-        min-height: 300px;
-    }
-}
-</style>
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            display: block;
+        }
+    </style>
 </head>
-
 <body>
-<div class="container">
-    <header>
-        <h1>🎥 録画中</h1>
-        <button id="logout" type="button">ログアウト</button>
-    </header>
+    <div class="container">
+        <h1>🎥 録画設定</h1>
 
-    <div class="layout">
-        <section class="preview-area">
-            <div id="no-preview" class="no-preview">
-                録画開始後、ここにプレビューが表示されます。<br>
-                録画停止後は、録画内容を確認できます。
-            </div>
-
-            <video id="preview" class="hidden" controls playsinline></video>
-        </section>
-
-        <section class="controls">
-            <h2>録画操作</h2>
-
-            <div id="status" class="status">
-                録画開始ボタンを押してください。
-            </div>
-
-            <div id="settingsDisplay" class="settings-display">
-                設定を読み込み中...
-            </div>
-
-            <div class="progress-wrap">
-                <div class="progress-label" id="progressLabel">
-                    送信済みチャンク: 0
-                </div>
-
-                <div class="progress-bar">
-                    <div id="progressValue" class="progress-value"></div>
-                </div>
-            </div>
-
-            <button id="start" type="button">
-                🎥 録画を開始
-            </button>
-
-            <button id="stop" type="button" disabled>
-                ⏹ 録画を停止
-            </button>
-
-            <button id="merge" type="button" disabled style="display:none">
-                📎 録画データを結合
-            </button>
-
-            <button id="back" type="button">
-                🔙 操作画面へ戻る
-            </button>
-
-            <p class="info">
-                「録画を開始」を押すと、共有する画面・ウィンドウ・ブラウザタブを選択できます。<br><br>
-                録画データは90秒ごとに分割され、サーバーへ送信されます。<br><br>
-                録画停止後、「録画データを結合」を押すと、分割データを1つのWebMファイルとして結合します。
+        <div class="storage-info">
+            <h3>💾 保存先について</h3>
+            <p>
+                Chrome・Edgeなど対応ブラウザでは、USBメモリ、SDカード、外部SSD、内部ストレージから保存先を直接選択できます。<br>
+                Firefox・Safari・iPhone・iPadなどでは、ブラウザのダウンロードまたは共有機能を使用します。
             </p>
-        </section>
+        </div>
+
+        <div class="form-group">
+            <label for="storage">保存先</label>
+            <select id="storage">
+                <option value="default">デフォルト（ダウンロードフォルダ）</option>
+                <option value="custom">カスタム（USB / SD / SSD など）</option>
+            </select>
+            <p class="help-text">
+                カスタムを選択すると、録画開始時に保存先を選択するダイアログが表示されます（対応ブラウザのみ）。
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="fps">フレームレート（FPS）</label>
+            <select id="fps">
+                <option value="30">30 FPS（標準）</option>
+                <option value="60">60 FPS（高品質）</option>
+                <option value="120">120 FPS（超高品質）</option>
+            </select>
+            <p class="help-text">
+                高いFPSほど滑らかになりますが、ファイルサイズが大きくなります。
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="resolution">解像度</label>
+            <select id="resolution">
+                <option value="1280x720">720p（HD）</option>
+                <option value="1920x1080">1080p（フルHD）</option>
+                <option value="2560x1440">1440p（2K）</option>
+                <option value="3840x2160">2160p（4K）</option>
+            </select>
+            <p class="help-text">
+                高い解像度ほど鮮明になりますが、ファイルサイズが大きくなります。
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="audio">音声ソース</label>
+            <select id="audio">
+                <option value="system">システム音声（PC の音）</option>
+                <option value="mic">マイク（自分の声）</option>
+                <option value="both">両方</option>
+                <option value="none">なし（無音）</option>
+            </select>
+            <p class="help-text">
+                システム音声はPCの音、マイクは自分の声を録音します。
+            </p>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div class="button-group">
+            <button type="button" class="secondary" id="backButton">
+                ← 戻る
+            </button>
+            <button type="button" class="primary" id="startButton">
+                録画開始
+            </button>
+        </div>
     </div>
-</div>
 
-<script>
-if (sessionStorage.getItem("recording_authenticated") !== "true") {
-    window.location.href = "index.html";
-}
+    <script>
+        const storageSelect = document.getElementById("storage");
+        const fpsSelect = document.getElementById("fps");
+        const resolutionSelect = document.getElementById("resolution");
+        const audioSelect = document.getElementById("audio");
+        const statusDiv = document.getElementById("status");
+        const backButton = document.getElementById("backButton");
+        const startButton = document.getElementById("startButton");
 
-const startButton = document.getElementById("start");
-const stopButton = document.getElementById("stop");
-const mergeButton = document.getElementById("merge");
-const backButton = document.getElementById("back");
-const logoutButton = document.getElementById("logout");
+        let directoryHandle = null;
+        let customStorageSelected = false;
 
-const status = document.getElementById("status");
-const preview = document.getElementById("preview");
-const noPreview = document.getElementById("no-preview");
-const settingsDisplay = document.getElementById("settingsDisplay");
-const progressLabel = document.getElementById("progressLabel");
-const progressValue = document.getElementById("progressValue");
-
-const fps = sessionStorage.getItem("selected_fps") || "30";
-const resolution = sessionStorage.getItem("selected_resolution") || "1280x720";
-const storage = sessionStorage.getItem("selected_storage") || "internal";
-const cloud = sessionStorage.getItem("selected_cloud") || "s3";
-const externalStorageSelected =
-    sessionStorage.getItem("external_storage_selected") === "true";
-
-const [width, height] = resolution.split("x").map(Number);
-
-const CHUNK_INTERVAL_MS = 90 * 1000;
-
-let stream = null;
-let recorder = null;
-let sessionId = null;
-let chunkIndex = 0;
-let uploadQueue = Promise.resolve();
-let uploadedChunkCount = 0;
-let isStopping = false;
-let merged = false;
-let stopRequestedBySystem = false;
-
-function escapeHtml(text) {
-    const element = document.createElement("div");
-    element.textContent = text;
-    return element.innerHTML;
-}
-
-function getStorageLabel() {
-    if (storage === "external") {
-        return externalStorageSelected
-            ? "外部ストレージ（選択済み）"
-            : "外部ストレージ（未選択）";
-    }
-
-    return "内部ストレージ";
-}
-
-function getCloudLabel() {
-    const labels = {
-        s3: "Amazon S3",
-        gcs: "Google Cloud Storage",
-        mega: "MEGA",
-        inficloud: "InfiniCloud",
-        gdrive: "Google Drive",
-        dropbox: "Dropbox",
-        onedrive: "OneDrive",
-        local: "ローカル保存"
-    };
-
-    return labels[cloud] || cloud;
-}
-
-function displaySettings() {
-    settingsDisplay.innerHTML = `
-        <strong>現在の設定</strong><br>
-        FPS：${escapeHtml(fps)}FPS<br>
-        解像度：${escapeHtml(resolution)}<br>
-        保存先：${escapeHtml(getStorageLabel())}<br>
-        クラウド：${escapeHtml(getCloudLabel())}
-    `;
-}
-
-function generateSessionId() {
-    const random = Math.random().toString(36).slice(2, 10);
-
-    return `session-${Date.now()}-${random}`;
-}
-
-function getSupportedMimeType() {
-    if (!window.MediaRecorder) {
-        return null;
-    }
-
-    const mimeTypes = [
-        "video/webm;codecs=vp9,opus",
-        "video/webm;codecs=vp8,opus",
-        "video/webm"
-    ];
-
-    return mimeTypes.find((mimeType) => {
-        return MediaRecorder.isTypeSupported(mimeType);
-    }) || null;
-}
-
-function getReadableError(error) {
-    if (!error) {
-        return "原因不明のエラーです。";
-    }
-
-    const errorMessages = {
-        NotAllowedError:
-            "画面共有が拒否されたか、ブラウザの権限設定で画面録画が許可されていません。",
-        NotFoundError:
-            "共有できる画面・ウィンドウ・タブが見つかりませんでした。",
-        NotReadableError:
-            "選択した画面を読み取れませんでした。別の共有対象を選択してください。",
-        AbortError:
-            "画面共有の選択がキャンセルされました。",
-        InvalidStateError:
-            "このページを一度タップまたはクリックしてから、もう一度録画開始を押してください。",
-        SecurityError:
-            "画面録画にはHTTPS接続とブラウザの許可が必要です。",
-        TypeError:
-            "このブラウザでは画面録画機能が利用できない可能性があります。"
-    };
-
-    if (errorMessages[error.name]) {
-        return errorMessages[error.name];
-    }
-
-    return `${error.name || "Error"}: ${error.message || "詳細不明"}`;
-}
-
-function checkRecordingSupport() {
-    if (!window.isSecureContext) {
-        status.textContent =
-            "録画を開始できません。HTTPS接続でサイトを開いてください。";
-        startButton.disabled = true;
-        return false;
-    }
-
-    if (!navigator.mediaDevices) {
-        status.textContent =
-            "このブラウザではメディアデバイスAPIを利用できません。";
-        startButton.disabled = true;
-        return false;
-    }
-
-    if (!navigator.mediaDevices.getDisplayMedia) {
-        status.textContent =
-            "このブラウザは画面共有録画に対応していません。ChromeまたはEdgeで開いてください。";
-        startButton.disabled = true;
-        return false;
-    }
-
-    if (!window.MediaRecorder) {
-        status.textContent =
-            "このブラウザは録画機能（MediaRecorder）に対応していません。";
-        startButton.disabled = true;
-        return false;
-    }
-
-    if (!getSupportedMimeType()) {
-        status.textContent =
-            "利用可能なWebM録画形式が見つかりませんでした。";
-        startButton.disabled = true;
-        return false;
-    }
-
-    return true;
-}
-
-function updateProgress() {
-    progressLabel.textContent =
-        `送信済みチャンク: ${uploadedChunkCount}`;
-
-    const progressPercent = Math.min(uploadedChunkCount * 10, 100);
-    progressValue.style.width = `${progressPercent}%`;
-}
-
-async function uploadChunk(blob, index) {
-    // Renderには録画データ本体を送らない。
-    // Renderから「一時的な直接アップロードURL」だけ取得する。
-    const fileName = `${sessionId}/chunk-${String(index).padStart(6, "0")}.webm`;
-    const contentType = blob.type || "video/webm";
-
-    const urlResponse = await fetch("/create-upload-url", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            provider: cloud,
-            fileName,
-            contentType
-        })
-    });
-
-    let urlResult = {};
-
-    try {
-        urlResult = await urlResponse.json();
-    } catch (error) {
-        urlResult = {};
-    }
-
-    if (!urlResponse.ok || !urlResult.ok || !urlResult.uploadUrl) {
-        throw new Error(
-            urlResult.error ||
-            "クラウドへのアップロードURLを取得できませんでした。"
-        );
-    }
-
-    // 録画データ本体はここからクラウドへ直接送信される。
-    const uploadResponse = await fetch(urlResult.uploadUrl, {
-        method: "PUT",
-        headers: {
-            "Content-Type": contentType
-        },
-        body: blob
-    });
-
-    if (!uploadResponse.ok) {
-        throw new Error(
-            `クラウドへのチャンク ${index + 1} のアップロードに失敗しました。` +
-            ` HTTP ${uploadResponse.status}`
-        );
-    }
-
-    uploadedChunkCount += 1;
-    updateProgress();
-
-    return {
-        ok: true,
-        filename: fileName,
-        provider: cloud
-    };
-}
-
-async function waitForUploads() {
-    try {
-        await uploadQueue;
-    } catch (error) {
-        console.error("アップロード待機エラー:", error);
-    }
-}
-
-async function startRecording() {
-    if (recorder && recorder.state === "recording") {
-        return;
-    }
-
-    if (!checkRecordingSupport()) {
-        return;
-    }
-
-    try {
-        startButton.disabled = true;
-        stopButton.disabled = true;
-        mergeButton.disabled = true;
-
-        status.classList.remove("recording");
-        status.textContent =
-            "画面・ウィンドウ・ブラウザタブの選択画面を開いています...";
-
-        sessionId = generateSessionId();
-        chunkIndex = 0;
-        uploadedChunkCount = 0;
-        uploadQueue = Promise.resolve();
-        isStopping = false;
-        merged = false;
-        stopRequestedBySystem = false;
-        updateProgress();
-
-        stream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: true
-        });
-
-        if (!stream || stream.getVideoTracks().length === 0) {
-            throw new Error("映像トラックを取得できませんでした。");
+        function showStatus(message, type = "info") {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
         }
 
-        const videoTrack = stream.getVideoTracks()[0];
+        async function selectCustomStorage() {
+            if (typeof window.showDirectoryPicker !== "function") {
+                showStatus(
+                    "お使いのブラウザはカスタム保存先に対応していません。デフォルト保存を使用します。",
+                    "error"
+                );
 
-        try {
-            await videoTrack.applyConstraints({
-                frameRate: {
-                    ideal: Number(fps),
-                    max: Number(fps)
-                },
-                width: {
-                    ideal: width
-                },
-                height: {
-                    ideal: height
-                }
-            });
-        } catch (constraintError) {
-            console.warn(
-                "FPSまたは解像度の適用に失敗しました。端末の対応範囲で録画を継続します。",
-                constraintError
-            );
-        }
+                storageSelect.value = "default";
+                customStorageSelected = false;
 
-        const mimeType = getSupportedMimeType();
-
-        if (!mimeType) {
-            throw new Error("WebMの録画形式を利用できません。");
-        }
-
-        recorder = new MediaRecorder(stream, {
-            mimeType
-        });
-
-        recorder.onstart = () => {
-            status.classList.add("recording");
-            status.textContent =
-                `🔴 録画中
-${fps}FPS / ${resolution}
-90秒ごとにデータを送信します。`;
-
-            startButton.disabled = true;
-            stopButton.disabled = false;
-        };
-
-        recorder.ondataavailable = (event) => {
-            if (!event.data || event.data.size === 0) {
-                return;
+                return null;
             }
 
-            const currentChunkIndex = chunkIndex;
-            chunkIndex += 1;
-
-            uploadQueue = uploadQueue
-                .then(async () => {
-                    await uploadChunk(event.data, currentChunkIndex);
-                })
-                .catch((uploadError) => {
-                    console.error("チャンク送信エラー:", uploadError);
-
-                    if (
-                        recorder &&
-                        recorder.state === "recording" &&
-                        !stopRequestedBySystem
-                    ) {
-                        stopRequestedBySystem = true;
-
-                        status.textContent =
-                            `⚠️ チャンクの送信に失敗しました。
-${uploadError.message}
-録画を停止します。`;
-
-                        stopRecording();
-                    }
+            try {
+                const handle = await window.showDirectoryPicker({
+                    mode: "readwrite"
                 });
-        };
 
-        recorder.onerror = (event) => {
-            console.error("MediaRecorderエラー:", event.error);
+                const permission = await handle.queryPermission({
+                    mode: "readwrite"
+                });
 
-            status.textContent =
-                `録画中にエラーが発生しました。
-${getReadableError(event.error)}`;
-        };
+                if (permission !== "granted") {
+                    const requestPermission = await handle.requestPermission({
+                        mode: "readwrite"
+                    });
 
-        recorder.onstop = async () => {
-            status.classList.remove("recording");
+                    if (requestPermission !== "granted") {
+                        showStatus(
+                            "保存先のアクセス許可が得られませんでした。デフォルト保存を使用します。",
+                            "error"
+                        );
 
-            stopButton.disabled = true;
-            startButton.disabled = false;
+                        storageSelect.value = "default";
+                        customStorageSelected = false;
 
-            status.textContent =
-                "最終データをクラウドへ保存しています...";
+                        return null;
+                    }
+                }
 
-            await waitForUploads();
+                directoryHandle = handle;
+                customStorageSelected = true;
 
-            if (uploadedChunkCount === 0) {
-                status.textContent =
-                    "録画データが送信されませんでした。もう一度録画してください。";
-                return;
+                showStatus(
+                    `✅ 保存先を選択しました：${handle.name}`,
+                    "success"
+                );
+
+                return handle;
+
+            } catch (error) {
+                console.error("保存先選択エラー:", error);
+
+                if (error.name === "AbortError") {
+                    showStatus(
+                        "保存先の選択をキャンセルしました。デフォルト保存を使用します。",
+                        "info"
+                    );
+                } else {
+                    showStatus(
+                        `保存先の選択に失敗しました：${error.message}`,
+                        "error"
+                    );
+                }
+
+                storageSelect.value = "default";
+                customStorageSelected = false;
+
+                return null;
             }
+        }
 
-            mergeButton.disabled = true;
-
-            if (stopRequestedBySystem) {
-                status.textContent =
-                    `⚠️ 録画は自動停止しました。
-クラウドへ保存済みチャンク: ${uploadedChunkCount}`;
+        storageSelect.addEventListener("change", async () => {
+            if (storageSelect.value === "custom") {
+                await selectCustomStorage();
             } else {
-                status.textContent =
-                    `録画完了。
-クラウドへ保存済みチャンク: ${uploadedChunkCount}
-保存先: ${getCloudLabel()}`;
-            }
-        };
-
-        videoTrack.addEventListener("ended", () => {
-            if (recorder && recorder.state === "recording") {
-                status.textContent =
-                    "画面共有が終了されたため、録画を停止します。";
-
-                stopRecording();
+                directoryHandle = null;
+                customStorageSelected = false;
+                showStatus("", "info");
             }
         });
 
-        recorder.start(CHUNK_INTERVAL_MS);
+        backButton.addEventListener("click", () => {
+            window.location.href = "index.html";
+        });
 
-    } catch (error) {
-        console.error("録画開始エラー:", error);
+        startButton.addEventListener("click", async () => {
+            const fps = parseInt(fpsSelect.value);
+            const resolution = resolutionSelect.value;
+            const audioSource = audioSelect.value;
 
-        if (stream) {
-            stream.getTracks().forEach((track) => track.stop());
-            stream = null;
-        }
+            const settings = {
+                fps,
+                resolution,
+                audioSource,
+                useCustomStorage: customStorageSelected,
+                directoryHandle: directoryHandle
+            };
 
-        recorder = null;
-        startButton.disabled = false;
-        stopButton.disabled = true;
-        mergeButton.disabled = true;
+            sessionStorage.setItem("recorderSettings", JSON.stringify(settings));
 
-        status.classList.remove("recording");
-        status.textContent =
-            `録画を開始できませんでした。
-${getReadableError(error)}`;
-    }
-}
+            window.location.href = "record.html";
+        });
 
-function stopRecording() {
-    if (isStopping) {
-        return;
-    }
+        (async () => {
+            const isFileSystemAccessSupported =
+                typeof window.showDirectoryPicker === "function";
 
-    isStopping = true;
+            if (!isFileSystemAccessSupported) {
+                storageSelect.value = "default";
+                storageSelect.disabled = true;
 
-    stopButton.disabled = true;
+                const customOption = storageSelect.querySelector(
+                    'option[value="custom"]'
+                );
 
-    if (recorder && recorder.state === "recording") {
-        recorder.stop();
-    } else {
-        startButton.disabled = false;
-    }
+                if (customOption) {
+                    customOption.textContent =
+                        "カスタム（非対応ブラウザ）";
+                    customOption.disabled = true;
+                }
 
-    if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        stream = null;
-    }
-}
-
-async function mergeRecording() {
-    status.textContent =
-        "現在の方式では録画データは90秒ごとのチャンクとしてクラウドへ直接保存されます。";
-}
-
-function goBack() {
-    if (recorder && recorder.state === "recording") {
-        const shouldStop = window.confirm(
-            "録画中です。録画を停止して操作画面へ戻りますか？"
-        );
-
-        if (!shouldStop) {
-            return;
-        }
-
-        stopRecording();
-    }
-
-    window.location.href = "recorder.html";
-}
-
-function doLogout() {
-    if (recorder && recorder.state === "recording") {
-        const shouldStop = window.confirm(
-            "録画中です。録画を停止してログアウトしますか？"
-        );
-
-        if (!shouldStop) {
-            return;
-        }
-
-        stopRecording();
-    }
-
-    sessionStorage.clear();
-    window.location.href = "index.html";
-}
-
-displaySettings();
-updateProgress();
-
-startButton.addEventListener("click", startRecording);
-stopButton.addEventListener("click", stopRecording);
-mergeButton.addEventListener("click", mergeRecording);
-backButton.addEventListener("click", goBack);
-logoutButton.addEventListener("click", doLogout);
-
-window.addEventListener("load", () => {
-    checkRecordingSupport();
-});
-</script>
+                showStatus(
+                    "お使いのブラウザはカスタム保存先に対応していません。デフォルト保存を使用します。",
+                    "info"
+                );
+            }
+        })();
+    </script>
 </body>
 </html>
